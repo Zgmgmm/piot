@@ -12,7 +12,7 @@ import numpy as np
 
 def get_screen_time_data():
     # Screen Time 数据库路径
-    db_path = "knowledgeC.cp.db"
+    db_path = "knowledgeC.db"
     
     # 连接数据库
     conn = sqlite3.connect(db_path)
