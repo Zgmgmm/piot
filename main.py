@@ -10,15 +10,14 @@ from datetime import datetime
 from pytz import timezone
 import numpy as np
 
+MACOS_EPOCH_OFFSET = 978307200  # macOS时间戳偏移量
+TARGET_DATE = "2025-05-02"       # 查询日期
+DB_PATH = "/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db"        # 数据库路径
+
 def get_screen_time_data():
-    # Screen Time 数据库路径
-    db_path = "knowledgeC.db"
-    
     # 连接数据库
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     
-    # 固定查询日期为 2025.04.29
-    target_date = "2025-04-29"
     query = f"""
     SELECT 
         ZOBJECT.ZVALUESTRING as app_name,
@@ -28,7 +27,7 @@ def get_screen_time_data():
         ZOBJECT
     WHERE 
         ZSTREAMNAME = '/app/usage' 
-        AND date(ZOBJECT.ZSTARTDATE + 978307200, 'unixepoch') = '{target_date}'
+        AND date(ZOBJECT.ZSTARTDATE + {MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '{TARGET_DATE}'
         AND ZOBJECT.ZVALUESTRING IS NOT NULL
     ORDER BY 
         ZOBJECT.ZSTARTDATE
@@ -38,8 +37,8 @@ def get_screen_time_data():
     conn.close()
     
     # 转换时间戳，macOS 时间戳从 2001-01-01 开始
-    df['start_time'] = pd.to_datetime(df['start_time'] + 978307200, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
-    df['end_time'] = pd.to_datetime(df['end_time'] + 978307200, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
+    df['start_time'] = pd.to_datetime(df['start_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
+    df['end_time'] = pd.to_datetime(df['end_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
     
     return df
 
@@ -139,7 +138,7 @@ def generate_gantt_chart(df):
 
     # 绘制甘特图
     fig, ax = plt.subplots(figsize=(16, 8))
-    ax.set_title("2025-04-28 应用使用情况（甘特图）", fontsize=16)
+    ax.set_title(f"{TARGET_DATE} 应用使用情况（甘特图）", fontsize=16)
 
     # 使用过滤后的应用列表分配颜色
     colors = plt.cm.tab20(np.linspace(0, 1, len(unique_apps)))
@@ -193,12 +192,6 @@ def generate_gantt_chart(df):
     plt.savefig("screen_time_gantt.png")
     plt.show()
 
-def convert_macos_timestamp(ts: float) -> pd.Timestamp:
-    """转换macOS时间戳为本地化时间对象"""
-    return pd.to_datetime(ts + MACOS_EPOCH_OFFSET, unit='s') \
-             .tz_localize('UTC') \
-             .tz_convert(TIMEZONE)
-
 if __name__ == "__main__":
     df = get_screen_time_data()
     if df.empty:
@@ -217,7 +210,3 @@ if __name__ == "__main__":
         # visualize_app_usage(app_usage)
         
         generate_gantt_chart(df)
-MACOS_EPOCH_OFFSET = 978307200  # macOS时间戳偏移量
-TARGET_DATE = "2025-04-29"       # 查询日期
-DB_PATH = "knowledgeC.db"        # 数据库路径
-TIMEZONE = timezone('Asia/Shanghai')  # 时区设置
