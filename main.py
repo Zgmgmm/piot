@@ -72,7 +72,17 @@ def visualize_app_usage(app_usage):
 
 def generate_gantt_chart(df):
     # 合并相邻时间段的函数
-    def merge_intervals(group):
+    def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
+        """
+        合并相邻时间段
+        
+        Args:
+            group: 按应用分组的时间段数据
+            threshold: 合并间隔阈值（分钟）
+        
+        Returns:
+            合并后的时间段DataFrame
+        """
         if len(group) == 0:
             return group
         # 按开始时间排序
@@ -102,11 +112,18 @@ def generate_gantt_chart(df):
     df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
     df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
 
-    # 按总使用时长排序，给应用编号，确保 y 轴不重叠
-    total_usage = df.groupby('app_name')['duration'].sum().sort_values(ascending=False)
+    # 按总使用时长排序并过滤总时长≥2分钟的应用
+    total_usage = df.groupby('app_name')['duration'].sum()
+    total_usage = total_usage[total_usage >= 2].sort_values(ascending=False)
+    
+    # 重建应用顺序映射
     app_order = {app: i for i, app in enumerate(total_usage.index)}
+    df = df[df['app_name'].isin(total_usage.index)]  # 过滤数据集
     df['y'] = df['app_name'].map(app_order)
     df = df.sort_values('y')  # 排序
+
+    # 更新颜色分配逻辑
+    unique_apps = total_usage.index.tolist()
 
     if df.empty:
         print("数据为空，无法绘制甘特图。")
@@ -122,16 +139,24 @@ def generate_gantt_chart(df):
 
     # 绘制甘特图
     fig, ax = plt.subplots(figsize=(16, 8))
-    ax.set_title("2025-04-29 应用使用情况（甘特图）", fontsize=16)
+    ax.set_title("2025-04-28 应用使用情况（甘特图）", fontsize=16)
 
-    # 为每个应用分配固定颜色
-    unique_apps = df['app_name'].unique()
+    # 使用过滤后的应用列表分配颜色
     colors = plt.cm.tab20(np.linspace(0, 1, len(unique_apps)))
     app_colors = {app: colors[i] for i, app in enumerate(unique_apps)}
 
+    def format_time(minutes):
+        hours = int(minutes // 60)
+        minutes = int(minutes % 60)
+        return f"{hours}h{minutes}m" if hours > 0 else f"{int(minutes)}m"
+    def format_duration(minutes: float) -> str:
+        """将分钟数格式化为小时分钟表示"""
+        return f"{int(minutes//60)}h{int(minutes%60)}m" if minutes >= 60 else f"{int(minutes)}m"
     bars = []  # 存储所有条形对象
     for _, row in df.iterrows():
-        bar = ax.barh(row['app_name'], row['duration'], 
+        # 在合并前计算总使用时长
+        total_usage_before_merge = df[df['end_time'] > df['start_time']].groupby('app_name')['duration'].sum().sort_values(ascending=False)
+        bar = ax.barh(f'{row["app_name"]}\n{format_time(total_usage_before_merge[row["app_name"]])}', row['duration'], 
                      left=row['start_minutes'], 
                      height=0.5,
                      color=app_colors[row['app_name']])  # 使用固定颜色
@@ -168,6 +193,12 @@ def generate_gantt_chart(df):
     plt.savefig("screen_time_gantt.png")
     plt.show()
 
+def convert_macos_timestamp(ts: float) -> pd.Timestamp:
+    """转换macOS时间戳为本地化时间对象"""
+    return pd.to_datetime(ts + MACOS_EPOCH_OFFSET, unit='s') \
+             .tz_localize('UTC') \
+             .tz_convert(TIMEZONE)
+
 if __name__ == "__main__":
     df = get_screen_time_data()
     if df.empty:
@@ -186,3 +217,7 @@ if __name__ == "__main__":
         # visualize_app_usage(app_usage)
         
         generate_gantt_chart(df)
+MACOS_EPOCH_OFFSET = 978307200  # macOS时间戳偏移量
+TARGET_DATE = "2025-04-29"       # 查询日期
+DB_PATH = "knowledgeC.db"        # 数据库路径
+TIMEZONE = timezone('Asia/Shanghai')  # 时区设置
