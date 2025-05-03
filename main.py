@@ -15,7 +15,14 @@ MACOS_EPOCH_OFFSET = 978307200  # macOS时间戳偏移量
 # 计算昨天的日期
 yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 TARGET_DATE = yesterday       # 查询日期
-DB_PATH = "/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db"        # 数据库路径
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='查询屏幕使用时间数据的日期和数据库路径')
+    parser.add_argument('target_date', type=str, nargs='?', default=yesterday, help='查询日期，格式：YYYY-MM-DD，默认为昨天。')
+    parser.add_argument('--db_path', type=str, default='/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db', help='数据库路径，默认为系统默认路径。')
+    args = parser.parse_args()
+    TARGET_DATE = args.target_date
+    DB_PATH = args.db_path
 
 def get_screen_time_data():
     # 连接数据库
