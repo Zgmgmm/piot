@@ -6,12 +6,15 @@ plt.rcParams['axes.unicode_minus'] = False
 
 import sqlite3
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone
 import numpy as np
 
+import argparse
 MACOS_EPOCH_OFFSET = 978307200  # macOS时间戳偏移量
-TARGET_DATE = "2025-05-02"       # 查询日期
+# 计算昨天的日期
+yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+TARGET_DATE = yesterday       # 查询日期
 DB_PATH = "/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db"        # 数据库路径
 
 def get_screen_time_data():
@@ -193,6 +196,10 @@ def generate_gantt_chart(df):
     plt.show()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='查询屏幕使用时间数据的日期')
+    parser.add_argument('target_date', type=str, nargs='?', default=yesterday, help='查询日期，格式：YYYY-MM-DD，默认为昨天。')
+    args = parser.parse_args()
+    TARGET_DATE = args.target_date
     df = get_screen_time_data()
     if df.empty:
         print("未查询到数据，请确认日期或权限设置。")
