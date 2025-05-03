@@ -41,6 +41,6 @@ python main.py
 - `screen_time_gantt.png`：应用使用情况的甘特图。
 
 ## 注意事项
-- - 数据库查询日期可通过命令行参数指定，格式为`YYYY-MM-DD`。示例：`python main.py 2025-05-02`。
-+ - 数据库查询日期可通过命令行参数指定，格式为`YYYY-MM-DD`。示例：`python main.py 2025-05-02`，默认为昨天。
-  - 确保系统支持`Songti SC`或`PingFang SC`字体，以避免中文显示问题。
+- 数据库查询日期可通过命令行参数指定，格式为`YYYY-MM-DD`。示例：`python main.py 2025-05-02`，默认为昨天。
+- 确保系统支持`Songti SC`或`PingFang SC`字体，以避免中文显示问题
+- 时间合并阈值为5分钟，相邻间隔小于该值的使用记录会被合并

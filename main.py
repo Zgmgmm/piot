@@ -109,9 +109,47 @@ def generate_gantt_chart(df):
     new_min = max(0, min_start - 30)
     new_max = min(1440, max_end + 30)
 
-    # 绘制甘特图
+    # 初始化绘图对象
     fig, ax = plt.subplots(figsize=(16, 8))
     ax.set_title(f"{TARGET_DATE} 应用使用情况（甘特图）", fontsize=16)
+
+    # 检测时间空档
+    all_blocks = pd.concat([df['start_minutes'], df['start_minutes'] + df['duration']], axis=1)
+    all_blocks.columns = ['start', 'end']
+    all_blocks = all_blocks.sort_values('start').reset_index(drop=True)
+
+    gaps = []
+    prev_end = new_min
+    for _, block in all_blocks.iterrows():
+        gap_duration = block['start'] - prev_end
+        if gap_duration >= 5:  # 空档阈值提升至5分钟
+            gaps.append((prev_end, block['start']))
+                        # 动态调整标签垂直位置
+            hours = int(gap_duration // 60)
+            minutes = int(gap_duration % 60)
+            label = f"{hours}h{minutes}m" if hours > 0 else f"{int(gap_duration)}m"
+            ax.text(
+                x=(prev_end + block['start'])/2,
+                y=-1,  # 调整到横轴下方
+                s=label,
+                ha='center',
+                va='bottom',  # 改为底部对齐
+                color='white',
+                fontsize=10,
+                weight='bold',
+                alpha=0.9,
+                zorder=2,
+                bbox=dict(boxstyle='round', facecolor='#404040', edgecolor='black', alpha=0.7)
+            )
+        
+        prev_end = max(prev_end, block['end'])
+    
+    if prev_end < new_max:
+        gaps.append((prev_end, new_max))
+
+    # 先绘制时间空档
+    for gap_start, gap_end in gaps:
+        ax.axvspan(gap_start, gap_end, color='lightgray', alpha=0.3, zorder=0)
 
     # 使用过滤后的应用列表分配颜色
     colors = plt.cm.tab20(np.linspace(0, 1, len(unique_apps)))
@@ -121,7 +159,6 @@ def generate_gantt_chart(df):
         hours = int(minutes // 60)
         minutes = int(minutes % 60)
         return f"{hours}h{minutes}m" if hours > 0 else f"{int(minutes)}m"
-    def format_duration(minutes: float) -> str:
         """将分钟数格式化为小时分钟表示"""
         return f"{int(minutes//60)}h{int(minutes%60)}m" if minutes >= 60 else f"{int(minutes)}m"
     bars = []  # 存储所有条形对象
@@ -153,6 +190,8 @@ def generate_gantt_chart(df):
 
     # 设置横轴范围和标签
     ax.set_xlim(new_min, new_max)
+    ax.set_ylim(bottom=-0.5)  # 减少底部空白区域
+    plt.subplots_adjust(bottom=0.12)  # 调整底部边距
     # 只保留整点和半点的刻度
     ticks = [tick for tick in range(int(new_min), int(new_max) + 1) if tick % 30 == 0]
     ax.set_xticks(ticks)
@@ -161,7 +200,7 @@ def generate_gantt_chart(df):
     ax.set_ylabel("应用", fontsize=12)
     ax.grid(axis='x', linestyle='--', alpha=0.7)
 
-    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.15)
     plt.savefig("screen_time_gantt.png")
     plt.show()
 
