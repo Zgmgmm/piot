@@ -1,5 +1,6 @@
 /* Global styles and variables */
-:root {
+/* Theme variables */
+:root[data-theme="cyberpunk"] {
     --primary-neon: #0ff;
     --secondary-neon: #f0f;
     --tertiary-neon: #0f0;
@@ -16,6 +17,26 @@
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
+/* Light theme - minimalist white design */
+:root[data-theme="light"] {
+    --primary-neon: #2E7CF6;
+    --secondary-neon: #1D1D1F;
+    --tertiary-neon: #8E8E93;
+    --bg-dark: #FAFAFA;
+    --bg-darker: #F2F2F7;
+    --bg-card: #FFFFFF;
+    --text-primary: #1D1D1F;
+    --text-secondary: #8E8E93;
+    --border-radius: 10px;
+    --glow-small: none;
+    --glow-medium: none;
+    --glass-bg: #FFFFFF;
+    --glass-border: #E5E5EA;
+    --glass-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* Default theme variables are set via data-theme attributes */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -24,16 +45,27 @@
 }
 
 body {
-    font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', 'Poppins', -light-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg-dark);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
+    background-attachment: fixed;
+}
+
+/* Cyberpunk background */
+:root[data-theme="cyberpunk"] body {
     background-image: 
         radial-gradient(circle at 10% 20%, rgba(0, 255, 255, 0.05) 0%, transparent 20%),
         radial-gradient(circle at 90% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 20%),
         linear-gradient(to bottom, var(--bg-dark), var(--bg-darker));
-    background-attachment: fixed;
+}
+
+/* Light background */
+:root[data-theme="light"] body {
+    background-image: none;
+    background-color: #FFFFFF;
+    font-family: -light-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
 }
 
 .container {
@@ -89,6 +121,51 @@ h3 {
     overflow: hidden;
 }
 
+:root[data-theme="light"] .date-picker {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    backdrop-filter: none;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+}
+
+.file-upload-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: var(--glass-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    overflow: hidden;
+}
+
+:root[data-theme="light"] .file-upload-section {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    backdrop-filter: none;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+}
+
+/* File input styling for Light theme */
+:root[data-theme="light"] input[type="file"] {
+    font-family: -light-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+:root[data-theme="light"] input[type="file"]::file-selector-button {
+    background-color: var(--bg-darker);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: -light-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
 /* Date controls styling */
 .date-controls {
     display: flex;
@@ -128,6 +205,13 @@ h3 {
     justify-content: center;
 }
 
+:root[data-theme="light"] .date-display {
+    background-color: #F5F5F7;
+    border: none;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
 #date {
     padding: 10px 12px;
     border: none;
@@ -140,6 +224,12 @@ h3 {
     font-weight: 500;
 }
 
+:root[data-theme="light"] #date {
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
 .day-of-week {
     font-weight: bold;
     color: var(--primary-neon);
@@ -147,6 +237,13 @@ h3 {
     padding-right: 10px;
     text-shadow: var(--glow-small);
     letter-spacing: 1px;
+}
+
+:root[data-theme="light"] .day-of-week {
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-shadow: none;
+    letter-spacing: -0.01em;
 }
 
 /* Button styling */
@@ -201,6 +298,12 @@ button:active {
     border-color: var(--tertiary-neon);
 }
 
+:root[data-theme="light"] .date-nav-btn {
+    background-color: var(--bg-darker);
+    color: var(--text-primary);
+    border: none;
+}
+
 .date-nav-btn:hover {
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
 }
@@ -211,15 +314,30 @@ button:active {
     border-color: var(--secondary-neon);
 }
 
+:root[data-theme="light"] .action-btn {
+    background-color: var(--primary-neon);
+    color: white;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
 .action-btn:hover {
     box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
 }
 
 .primary-btn {
-    background-color: rgba(0, 0, 0, 0.5);
-    color: var(--primary-neon);
-    border-color: var(--primary-neon);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: var(--tertiary-neon);
+    border-color: var(--tertiary-neon);
     font-weight: 600;
+}
+
+:root[data-theme="light"] .primary-btn {
+    background-color: var(--primary-neon);
+    color: white;
+    border: none;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .primary-btn:hover {
@@ -242,6 +360,15 @@ button:active {
     animation: fadeIn 0.3s ease-in-out;
 }
 
+:root[data-theme="light"] .status-message {
+    background-color: #F5F5F7;
+    color: var(--text-primary);
+    border-left: 2px solid var(--primary-neon);
+    box-shadow: none;
+    font-size: 0.85rem;
+    letter-spacing: -0.01em;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -261,6 +388,12 @@ button:active {
     overflow: hidden;
 }
 
+:root[data-theme="light"] #chart-container {
+    border-radius: 10px;
+    backdrop-filter: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
 #chart-container::before {
     content: '';
     position: absolute;
@@ -272,6 +405,10 @@ button:active {
     box-shadow: var(--glow-small);
 }
 
+:root[data-theme="light"] #chart-container::before {
+    display: none;
+}
+
 #chart-container::after {
     content: '';
     position: absolute;
@@ -281,6 +418,10 @@ button:active {
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
     box-shadow: var(--glow-small);
+}
+
+:root[data-theme="light"] #chart-container::after {
+    display: none;
 }
 
 /* Idle tooltip styling */
@@ -378,7 +519,7 @@ button:active {
     padding: 12px;
     border: 1px solid var(--primary-neon);
     border-radius: var(--border-radius);
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(0, 0, 0, 0.028);
     color: var(--text-primary);
     box-shadow: var(--glow-small);
     cursor: pointer;
@@ -393,7 +534,7 @@ button:active {
 #db-file::before {
     content: '选择文件';
     display: inline-block;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.01);
     color: var(--primary-neon);
     border: 1px solid var(--primary-neon);
     border-radius: var(--border-radius);
@@ -409,7 +550,7 @@ button:active {
 }
 
 #db-file:hover::before {
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 15px var(--primary-neon);
 }
 
 #upload-button {
@@ -417,7 +558,17 @@ button:active {
     color: var(--primary-neon);
     border-color: var(--primary-neon);
     font-weight: 600;
-    min-width: 100px;
+}
+
+:root[data-theme="light"] #upload-button {
+    background-color: var(--primary-neon);
+    color: white;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
 }
 
 #upload-button:hover {
@@ -453,6 +604,29 @@ button:active {
 .flatpickr-day:hover {
     background: rgba(0, 255, 255, 0.2) !important;
 }
+
+/* Enhanced styling for disabled dates */
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+    color: var(--glass-border) !important;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    cursor: not-allowed !important;
+    text-decoration: line-through !important;
+    opacity: 0.6 !important;
+    position: relative !important;
+}
+
+/* Different styling for light theme disabled dates */
+:root[data-theme="light"] .flatpickr-day.flatpickr-disabled,
+:root[data-theme="light"] .flatpickr-day.flatpickr-disabled:hover {
+    color: #D1D1D6 !important;
+    background-color: #F2F2F7 !important;
+    border: 1px dashed #E5E5EA !important;
+    text-decoration: line-through !important;
+    opacity: 0.8 !important;
+}
+
+/* Removed tooltip for disabled dates as requested */
 
 .flatpickr-months .flatpickr-month,
 .flatpickr-current-month,
@@ -492,7 +666,8 @@ button:active {
 .idle-marker {
     vertical-align: middle;
 }
-/* Additional cyberpunk styles */
+/* Theme-specific styles */
+/* Cyberpunk styles */
 .subtitle {
     text-align: center;
     color: var(--secondary-neon);
@@ -522,7 +697,6 @@ button:active {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(10, 10, 18, 0.8);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -534,12 +708,21 @@ button:active {
     transition: opacity 0.3s ease;
 }
 
+:root[data-theme="cyberpunk"] .loading-overlay {
+    background: rgba(10, 10, 18, 0.8);
+}
+
+:root[data-theme="light"] .loading-overlay {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
 .loading-overlay.active {
     opacity: 1;
     pointer-events: all;
 }
 
-.cyber-spinner {
+.spinner {
     width: 50px;
     height: 50px;
     border: 3px solid transparent;
@@ -548,7 +731,19 @@ button:active {
     border-bottom: 3px solid var(--tertiary-neon);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+}
+
+:root[data-theme="cyberpunk"] .spinner {
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+:root[data-theme="light"] .spinner {
+    box-shadow: none;
+    border-width: 2px;
+    border-top-color: var(--primary-neon);
+    border-right-color: #E5E5E5;
+    border-bottom-color: #E5E5E5;
+    border-left-color: #E5E5E5;
 }
 
 .loading-text {
@@ -556,8 +751,15 @@ button:active {
     color: var(--primary-neon);
     font-size: 1rem;
     letter-spacing: 2px;
-    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
     animation: pulse 1.5s ease-in-out infinite;
+}
+
+:root[data-theme="cyberpunk"] .loading-text {
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+:root[data-theme="light"] .loading-text {
+    text-shadow: none;
 }
 
 @keyframes spin {
@@ -568,6 +770,119 @@ button:active {
 @keyframes pulse {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
+}
+
+/* Theme switcher */
+.theme-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+    font-family: -light-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.theme-option {
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+:root[data-theme="cyberpunk"] .theme-option.cyberpunk {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--primary-neon);
+    border: 1px solid var(--primary-neon);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+:root[data-theme="cyberpunk"] .theme-option.light {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: var(--text-secondary);
+    border: 1px solid var(--glass-border);
+}
+
+:root[data-theme="light"] .theme-option.cyberpunk {
+    background-color: var(--bg-darker);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 6px;
+}
+
+:root[data-theme="light"] .theme-option.light {
+    background-color: var(--primary-neon);
+    color: white;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+/* Light theme specific styles */
+:root[data-theme="light"] h1 {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    color: var(--primary-neon);
+    text-shadow: none;
+    font-weight: 600;
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+}
+
+:root[data-theme="light"] h1::after {
+    display: none;
+}
+
+:root[data-theme="light"] h3 {
+    color: var(--secondary-neon);
+    text-shadow: none;
+    font-weight: 500;
+    font-size: 1.1rem;
+    letter-spacing: -0.2px;
+}
+
+:root[data-theme="light"] button {
+    background-color: #F5F5F7;
+    box-shadow: none;
+    border: none;
+    border-radius: 4px;
+    font-weight: 400;
+    font-size: 13px;
+    padding: 8px 16px;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+:root[data-theme="light"] button::before {
+    display: none;
+}
+
+:root[data-theme="light"] button:hover {
+    background-color: #EBEBEB;
+    box-shadow: none;
+    transform: none;
+}
+
+:root[data-theme="light"] .section-glow {
+    display: none;
+}
+
+:root[data-theme="light"] .subtitle {
+    color: var(--text-secondary);
+    opacity: 1;
+    font-weight: 400;
+    font-size: 0.9rem;
+    letter-spacing: 0;
+    text-transform: none;
+    margin-top: -5px;
+    margin-bottom: 30px;
 }
 
 .btn-text {

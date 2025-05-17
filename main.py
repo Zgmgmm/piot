@@ -107,7 +107,7 @@ def get_app_display_name(app_name):
     如果在映射中找不到，对于a.b.c格式的包名，返回c部分
     """
     name_mapping = {
-        'com.apple.finder': 'Finder',
+        'com.light.finder': 'Finder',
         'com.tencent.xinWeChat': '微信',
         'com.googlecode.iterm2': 'Iterm2',
         'com.electron.lark.iron': '飞书会议', 
@@ -119,7 +119,7 @@ def get_app_display_name(app_name):
         'org.python.python': 'Python',
         'com.microsoft.VSCode': 'VSCode',
         'com.tencent.QQMusicMac': 'QQ音乐',
-        'com.apple.systempreferences': '系统设置',
+        'com.light.systempreferences': '系统设置',
     }
     
     # 如果在映射中找到则直接返回

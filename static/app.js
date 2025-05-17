@@ -168,6 +168,84 @@ function navigateToday() {
 }
 
 // 初始化日期为昨天
+// 主题设置
+let currentTheme = localStorage.getItem('theme') || 'light';
+
+// 设置主题函数
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    currentTheme = theme;
+    
+    // 更新标题
+    document.title = `Mac屏幕使用时间统计 | ${theme.charAt(0).toUpperCase() + theme.slice(1)}`;
+    
+    // 更新副标题和页脚文本
+    const subtitle = document.querySelector('.subtitle');
+    const footerText = document.querySelector('.footer-text');
+    
+    if (subtitle && footerText) {
+        if (theme === 'cyberpunk') {
+            subtitle.textContent = 'Cyberpunk Screen Time Viewer';
+            footerText.textContent = 'Cyberpunk Screen Time Viewer';
+        } else if (theme === 'light') {
+            subtitle.textContent = 'Screen Time Viewer';
+            footerText.textContent = 'Screen Time Viewer';
+        }
+    }
+    
+    // 如果是 Light 主题，调整图表样式
+    if (window.myChart) {
+        if (theme === 'light') {
+            window.myChart.setOption({
+                backgroundColor: '#FFFFFF',
+                textStyle: {
+                    fontFamily: '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif'
+                },
+                title: {
+                    textStyle: {
+                        color: '#1D1D1F',
+                        fontWeight: 500,
+                        fontSize: 14
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#E5E5E5',
+                    textStyle: {
+                        color: '#1D1D1F'
+                    },
+                    extraCssText: 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); border-radius: 6px;'
+                }
+            });
+        } else {
+            // 重置为 Cyberpunk 主题
+            window.myChart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: {
+                    fontFamily: '"Inter", "Poppins", sans-serif'
+                },
+                title: {
+                    textStyle: {
+                        color: '#fff',
+                        fontWeight: 600,
+                        fontSize: 16
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 10, 18, 0.8)',
+                    borderColor: 'rgba(0, 255, 255, 0.2)',
+                    textStyle: {
+                        color: '#fff'
+                    },
+                    extraCssText: 'box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); border-radius: 8px;'
+                }
+            });
+        }
+        window.myChart.resize();
+    }
+}
+
 window.onload = function () {
     // 初始化 DOM 元素
     chartContainer = document.getElementById('chart-container');
@@ -176,6 +254,13 @@ window.onload = function () {
     uploadButton = document.getElementById('upload-button');
     uploadStatus = document.getElementById('upload-status');
     dateInput = document.getElementById('date');
+    
+    // 初始化主题
+    setTheme(currentTheme);
+    
+    // 添加主题切换事件监听器
+    document.getElementById('theme-cyberpunk').addEventListener('click', () => setTheme('cyberpunk'));
+    document.getElementById('theme-light').addEventListener('click', () => setTheme('light'));
 
     // Initialize loading state (only after DOM is fully loaded)
     setTimeout(() => {
@@ -575,7 +660,7 @@ function processQueryResults(results) {
 // 将应用包名映射为中文显示名称
 function getAppDisplayName(appName) {
     const nameMapping = {
-        'com.apple.finder': 'Finder',
+        'com.light.finder': 'Finder',
         'com.tencent.xinWeChat': '微信',
         'com.googlecode.iterm2': 'Iterm2',
         'com.electron.lark.iron': '飞书会议',
@@ -587,7 +672,7 @@ function getAppDisplayName(appName) {
         'org.python.python': 'Python',
         'com.microsoft.VSCode': 'VSCode',
         'com.tencent.QQMusicMac': 'QQ音乐',
-        'com.apple.systempreferences': '系统设置',
+        'com.light.systempreferences': '系统设置',
     };
 
     // 如果在映射中找到则直接返回
@@ -635,6 +720,9 @@ function renderChart(data) {
         return;
     }
     const newChart = echarts.init(chartContainer);
+    
+    // Store chart reference globally for theme switching
+    window.myChart = newChart;
 
     // 计算每个应用的总使用时长
     const appUsageMap = {};
@@ -661,15 +749,35 @@ function renderChart(data) {
     // 为不同应用分配不同颜色
     const colorMap = {
         '飞书': '#00FFFF',      // Cyan
-        'Chrome': '#FF00FF',   // Magenta
+        '飞书会议': '#00FFFF',  // Cyan
+        'Chrome': '#0000FF',   // Blue
         '微信': '#00FF00',      // Green
-        '飞书会议': '#FF3366',  // Neon pink
-        'Goland': '#33CCFF'    // Light blue
+        'Goland': '#FF00FF'    // Magenta
     };
+    
+    // Light风格颜色 - 更高级的淡色调
+    const appleColorMap = {
+        '飞书': '#5AC8FA',      // 淡蓝色
+        'Chrome': '#AF52DE',   // 淡紫色
+        '微信': '#34C759',      // 淡绿色
+        '飞书会议': '#FF9500',  // 淡橙色
+        'Goland': '#2E7CF6'    // 蓝色
+    };
+    
     // Generate dynamic colors for other apps
     const generateNeonColor = (index) => {
         const hue = (index * 60) % 360;
         return `hsl(${hue}, 100%, 70%)`;
+    };
+    
+    // Generate Light-style colors for other apps - 更高级的淡色调
+    const generateLightColor = (index) => {
+        // 高级淡色调色板
+        const appleColors = [
+            '#5AC8FA', '#AF52DE', '#34C759', '#FF9500', '#2E7CF6', 
+            '#FF3B30', '#64D2FF', '#BF5AF2', '#30D158', '#FFD60A', '#66D4CF'
+        ];
+        return appleColors[index % appleColors.length];
     };
 
     // 获取当天的日期部分
@@ -725,6 +833,9 @@ function renderChart(data) {
         // 计算分钟差
         const durationMinutes = Math.round((endTime - startTime) / (1000 * 60));
 
+        // Get current theme
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'cyberpunk';
+        
         // When setting item style in seriesData
         seriesData.push({
             name: item.app_name,
@@ -734,7 +845,14 @@ function renderChart(data) {
                 endTime,
                 `${durationMinutes}m`
             ],
-            itemStyle: {
+            itemStyle: currentTheme === 'light' ? {
+                color: appleColorMap[item.app_name] || generateLightColor(categories.indexOf(item.app_name)),
+                borderColor: 'rgba(0, 0, 0, 0.05)',
+                borderWidth: 0,
+                borderRadius: 4,
+                shadowBlur: 0,
+                opacity: 0.9
+            } : {
                 color: colorMap[item.app_name] || generateNeonColor(categories.indexOf(item.app_name)),
                 borderColor: 'rgba(255, 255, 255, 0.2)',
                 borderWidth: 1,
@@ -744,33 +862,45 @@ function renderChart(data) {
         });
     });
 
+    // 获取当前主题
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'cyberpunk';
+    
     // 构建图表配置
     const option = {
         tooltip: {
             formatter: function (params) {
+                const labelColor = currentTheme === 'light' ? params.color : params.color;
+                const labelStyle = currentTheme === 'light' 
+                    ? `font-weight: 500; color: #1D1D1F; margin-bottom: 5px; font-size: 13px;` 
+                    : `font-weight: bold; color: ${params.color}; margin-bottom: 5px; font-size: 14px;`;
+                const labelTextColor = currentTheme === 'light' ? '#86868B' : '#aaa';
+                
                 return `<div style="padding: 8px;">
-                    <div style="font-weight: bold; color: ${params.color}; margin-bottom: 5px; font-size: 14px;">${params.name}</div>
+                    <div style="${labelStyle}">${params.name}</div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                        <span style="color: #aaa;">开始:</span>
+                        <span style="color: ${labelTextColor};">开始:</span>
                         <span>${new Date(params.value[1]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                        <span style="color: #aaa;">结束:</span>
+                        <span style="color: ${labelTextColor};">结束:</span>
                         <span>${new Date(params.value[2]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span style="color: #aaa;">时长:</span>
+                    <div style="display: flex; justify-content: space-between; font-weight: ${currentTheme === 'light' ? '500' : 'bold'};">
+                        <span style="color: ${labelTextColor};">时长:</span>
                         <span>${params.value[3]}</span>
                     </div>
                 </div>`;
             },
-            backgroundColor: 'rgba(10, 10, 18, 0.8)',
-            borderColor: 'rgba(0, 255, 255, 0.3)',
+            backgroundColor: currentTheme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(10, 10, 18, 0.8)',
+            borderColor: currentTheme === 'light' ? '#E5E5E5' : 'rgba(0, 255, 255, 0.3)',
             borderWidth: 1,
             textStyle: {
-                color: '#fff'
+                color: currentTheme === 'light' ? '#1D1D1F' : '#fff',
+                fontFamily: currentTheme === 'light' ? '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' : 'Inter, Poppins, sans-serif'
             },
-            extraCssText: 'backdrop-filter: blur(5px); border-radius: 8px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);'
+            extraCssText: currentTheme === 'light' 
+                ? 'backdrop-filter: blur(10px); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);' 
+                : 'backdrop-filter: blur(5px); border-radius: 8px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);'
         },
         grid: {
             height: categories.length * 40,
@@ -790,19 +920,21 @@ function renderChart(data) {
                 },
                 interval: 30 * 60 * 1000, // 30分钟间隔
                 textStyle: {
-                    color: 'rgba(0, 255, 255, 0.8)'
+                    color: currentTheme === 'light' ? '#86868B' : 'rgba(0, 255, 255, 0.8)',
+                    fontFamily: currentTheme === 'light' ? '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' : 'Inter, Poppins, sans-serif',
+                    fontSize: currentTheme === 'light' ? 11 : 12
                 }
             },
             splitLine: {
                 show: true,
                 lineStyle: {
-                    type: 'dashed',
-                    color: 'rgba(0, 255, 255, 0.15)'
+                    type: currentTheme === 'light' ? 'solid' : 'dashed',
+                    color: currentTheme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 255, 255, 0.15)'
                 }
             },
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(0, 255, 255, 0.3)'
+                    color: currentTheme === 'light' ? '#E5E5E5' : 'rgba(0, 255, 255, 0.3)'
                 }
             }
         },
@@ -823,28 +955,28 @@ function renderChart(data) {
                 },
                 rich: {
                     bold: {
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        fontFamily: 'Inter, Poppins, sans-serif',
-                        color: '#fff'
+                        fontWeight: currentTheme === 'light' ? '500' : 'bold',
+                        fontSize: currentTheme === 'light' ? 13 : 14,
+                        fontFamily: currentTheme === 'light' ? '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' : 'Inter, Poppins, sans-serif',
+                        color: currentTheme === 'light' ? '#1D1D1F' : '#fff'
                     },
                     time: {
-                        fontSize: 12,
-                        fontFamily: 'Inter, Poppins, sans-serif',
-                        color: 'rgba(255, 255, 255, 0.7)'
+                        fontSize: currentTheme === 'light' ? 11 : 12,
+                        fontFamily: currentTheme === 'light' ? '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' : 'Inter, Poppins, sans-serif',
+                        color: currentTheme === 'light' ? '#86868B' : 'rgba(255, 255, 255, 0.7)'
                     }
                 }
             },
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(0, 255, 255, 0.3)'
+                    color: currentTheme === 'light' ? '#E5E5E5' : 'rgba(0, 255, 255, 0.3)'
                 }
             },
             splitLine: {
                 show: true,
                 lineStyle: {
-                    type: 'dashed',
-                    color: 'rgba(0, 255, 255, 0.1)'
+                    type: currentTheme === 'light' ? 'solid' : 'dashed',
+                    color: currentTheme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 255, 255, 0.1)'
                 }
             },
             inverse: true
@@ -906,8 +1038,11 @@ function renderChart(data) {
                             type: 'text',
                             style: {
                                 text: formattedDuration,
-                                textFont: api.font({ fontSize: fontSize }),
-                                textFill: '#fff',
+                                textFont: api.font({ 
+                                    fontSize: fontSize,
+                                    fontFamily: currentTheme === 'light' ? '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' : 'Inter, Poppins, sans-serif'
+                                }),
+                                textFill: currentTheme === 'light' ? '#FFFFFF' : '#fff',
                                 textAlign: 'center',
                                 textVerticalAlign: 'middle'
                             },
