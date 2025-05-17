@@ -3,6 +3,23 @@ let dateInput;
 let chartContainer;
 let fileUploadSection;
 let dbFileInput;
+
+// 获取中文星期几
+function getChineseDayOfWeek(date) {
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    return '周' + days[date.getDay()];
+}
+
+// 更新星期几显示
+function updateDayOfWeek(date) {
+    const dayOfWeekElement = document.getElementById('day-of-week');
+    if (dayOfWeekElement) {
+        dayOfWeekElement.textContent = getChineseDayOfWeek(date);
+    }
+}
+
+// Flatpickr 实例
+let flatpickrInstance;
 let uploadButton;
 let uploadStatus;
 
@@ -19,59 +36,148 @@ const MACOS_EPOCH_OFFSET = 978307200;
 
 // 日期导航函数
 function navigateDate(days) {
-    const currentDate = new Date(dateInput.value);
-    currentDate.setDate(currentDate.getDate() + days);
-    const yyyy = currentDate.getFullYear();
-    const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(currentDate.getDate()).padStart(2, '0');
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    if (!loadedDb) {
+        uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先上传数据库文件</p>';
+        return;
+    }
     
-    // 如果数据库已加载，直接查询新日期
-    if (loadedDb) {
-        queryDatabase();
-    } else {
-        uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“确认”按钮</p>';
+    // 获取可用日期列表
+    try {
+        const query = `
+        SELECT DISTINCT
+            date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') as date
+        FROM 
+            ZOBJECT
+        WHERE 
+            ZSTREAMNAME = '/app/usage' 
+            AND ZOBJECT.ZVALUESTRING IS NOT NULL
+        ORDER BY 
+            date
+        `;
+        
+        const results = loadedDb.exec(query);
+        
+        if (results.length === 0 || results[0].values.length === 0) {
+            uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
+            return;
+        }
+        
+        const availableDates = results[0].values.map(row => row[0]);
+        
+        // 获取当前选中的日期
+        const currentDate = flatpickrInstance.selectedDates[0] || new Date();
+        const formattedCurrentDate = currentDate.getFullYear() + '-' + 
+                                    String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                                    String(currentDate.getDate()).padStart(2, '0');
+        
+        // 找到当前日期在可用日期列表中的索引
+        const currentIndex = availableDates.indexOf(formattedCurrentDate);
+        
+        if (currentIndex !== -1) {
+            // 如果当前日期在列表中，则导航到相应的日期
+            const targetIndex = currentIndex + days;
+            
+            if (targetIndex >= 0 && targetIndex < availableDates.length) {
+                // 如果目标索引有效，则选择该日期
+                flatpickrInstance.setDate(availableDates[targetIndex]);
+                updateDayOfWeek(flatpickrInstance.selectedDates[0]);
+                queryDatabase();
+            } else {
+                // 如果目标索引无效，则显示错误消息
+                if (days > 0) {
+                    uploadStatus.innerHTML = '<p style="color: orange;">已经是最后一个有数据的日期</p>';
+                } else {
+                    uploadStatus.innerHTML = '<p style="color: orange;">已经是第一个有数据的日期</p>';
+                }
+            }
+        } else {
+            // 如果当前日期不在列表中，则选择第一个或最后一个日期
+            const targetDate = days > 0 ? availableDates[0] : availableDates[availableDates.length - 1];
+            flatpickrInstance.setDate(targetDate);
+            updateDayOfWeek(flatpickrInstance.selectedDates[0]);
+            uploadStatus.innerHTML = `<p style="color: blue;">当前日期无数据，已自动选择有数据的日期: ${targetDate}</p>`;
+            queryDatabase();
+        }
+    } catch (error) {
+        console.error('日期导航失败:', error);
+        uploadStatus.innerHTML = `<p style="color: red;">日期导航失败: ${error.message}</p>`;
     }
 }
 
 // 导航到今天的函数
 function navigateToday() {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    if (!loadedDb) {
+        uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先上传数据库文件</p>';
+        return;
+    }
     
-    // 如果数据库已加载，直接查询今天的数据
-    if (loadedDb) {
-        queryDatabase();
-    } else {
-        uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“确认”按钮</p>';
+    const today = new Date();
+    const formattedToday = today.getFullYear() + '-' + 
+                          String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                          String(today.getDate()).padStart(2, '0');
+    
+    // 检查今天是否有数据
+    try {
+        const query = `
+        SELECT COUNT(*) as count
+        FROM ZOBJECT
+        WHERE 
+            ZSTREAMNAME = '/app/usage' 
+            AND date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '${formattedToday}'
+            AND ZOBJECT.ZVALUESTRING IS NOT NULL
+        `;
+        
+        const results = loadedDb.exec(query);
+        
+        if (results.length > 0 && results[0].values.length > 0 && results[0].values[0][0] > 0) {
+            // 如果今天有数据，则直接选择今天
+            flatpickrInstance.setDate(today);
+            updateDayOfWeek(today);
+            queryDatabase();
+        } else {
+            // 如果今天没有数据，则选择最近的有数据的日期
+            const dateQuery = `
+            SELECT 
+                date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') as date
+            FROM 
+                ZOBJECT
+            WHERE 
+                ZSTREAMNAME = '/app/usage' 
+                AND ZOBJECT.ZVALUESTRING IS NOT NULL
+            ORDER BY 
+                date DESC
+            LIMIT 1
+            `;
+            
+            const dateResults = loadedDb.exec(dateQuery);
+            
+            if (dateResults.length > 0 && dateResults[0].values.length > 0) {
+                const latestDate = dateResults[0].values[0][0];
+                flatpickrInstance.setDate(latestDate);
+                updateDayOfWeek(flatpickrInstance.selectedDates[0]);
+                uploadStatus.innerHTML = `<p style="color: blue;">今天无数据，已自动选择最近的有数据的日期: ${latestDate}</p>`;
+                queryDatabase();
+            } else {
+                uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
+            }
+        }
+    } catch (error) {
+        console.error('导航到今天失败:', error);
+        uploadStatus.innerHTML = `<p style="color: red;">导航到今天失败: ${error.message}</p>`;
     }
 }
 
 // 初始化日期为昨天
 window.onload = function () {
     // 初始化 DOM 元素
-    dateInput = document.getElementById('date');
     chartContainer = document.getElementById('chart-container');
     fileUploadSection = document.getElementById('file-upload-section');
     dbFileInput = document.getElementById('db-file');
     uploadButton = document.getElementById('upload-button');
     uploadStatus = document.getElementById('upload-status');
+    dateInput = document.getElementById('date');
     
-    // 设置日期
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yyyy = yesterday.getFullYear();
-    const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const dd = String(yesterday.getDate()).padStart(2, '0');
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
-    
-    // 初始化 SQL.js
-    initializeSqlJs();
-    
-    // 添加文件上传事件监听
+    // 添加事件监听器
     dbFileInput.addEventListener('change', handleFileSelect);
     uploadButton.addEventListener('click', function() {
         if (uploadedFile) {
@@ -80,6 +186,31 @@ window.onload = function () {
             uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
         }
     });
+    
+    // 初始化日期选择器
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // 初始化 Flatpickr 日期选择器
+    flatpickrInstance = flatpickr(dateInput, {
+        locale: 'zh',
+        dateFormat: 'Y-m-d',
+        defaultDate: yesterday,
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length > 0) {
+                updateDayOfWeek(selectedDates[0]);
+                queryDatabase();
+            }
+        },
+        disable: [] // 初始化为空数组，稍后会更新
+    });
+    
+    // 更新星期几显示
+    updateDayOfWeek(yesterday);
+    
+    // 初始化 SQL.js
+    initializeSqlJs();
     
     // 显示初始提示
     uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“处理文件”按钮</p>';
@@ -166,7 +297,8 @@ function processUploadedFile() {
             loadedDb = new SQL.Database(uInt8Array); // 将数据库存储在全局变量中
             uploadStatus.innerHTML = '<p style="color: green;">数据库文件加载成功</p>';
             
-            // 数据库加载成功后查询当前日期的数据
+            // 数据库加载成功后更新可选日期并查询当前日期的数据
+            updateAvailableDates();
             queryDatabase();
         } catch (error) {
             console.error('处理数据库文件失败:', error);
@@ -179,6 +311,77 @@ function processUploadedFile() {
     reader.readAsArrayBuffer(uploadedFile);
 }
 
+// 更新日期选择器中可用的日期
+function updateAvailableDates() {
+    if (!loadedDb) {
+        return;
+    }
+    
+    try {
+        // 构建查询，获取所有有数据的日期
+        const query = `
+        SELECT DISTINCT
+            date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') as date
+        FROM 
+            ZOBJECT
+        WHERE 
+            ZSTREAMNAME = '/app/usage' 
+            AND ZOBJECT.ZVALUESTRING IS NOT NULL
+        ORDER BY 
+            date
+        `;
+        
+        // 执行查询
+        const results = loadedDb.exec(query);
+        
+        if (results.length === 0 || results[0].values.length === 0) {
+            console.log('没有找到任何日期的数据');
+            uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
+            return;
+        }
+        
+        // 获取所有有数据的日期
+        const availableDates = results[0].values.map(row => row[0]);
+        console.log('可用日期:', availableDates);
+        
+        // 创建一个函数，用于禁用没有数据的日期
+        const disableUnavailableDates = (date) => {
+            // 格式化日期为 YYYY-MM-DD
+            const formattedDate = date.getFullYear() + '-' + 
+                                 String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                 String(date.getDate()).padStart(2, '0');
+            
+            // 如果日期不在可用日期列表中，则禁用
+            return !availableDates.includes(formattedDate);
+        };
+        
+        // 更新 Flatpickr 配置
+        flatpickrInstance.set('disable', [disableUnavailableDates]);
+        
+        // 如果当前选中的日期没有数据，则选择最近的有数据的日期
+        const currentDate = flatpickrInstance.selectedDates[0];
+        if (currentDate) {
+            const formattedCurrentDate = currentDate.getFullYear() + '-' + 
+                                        String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                                        String(currentDate.getDate()).padStart(2, '0');
+            
+            if (!availableDates.includes(formattedCurrentDate) && availableDates.length > 0) {
+                // 选择第一个可用日期
+                flatpickrInstance.setDate(availableDates[0]);
+                uploadStatus.innerHTML = `<p style="color: blue;">当前日期无数据，已自动选择有数据的日期: ${availableDates[0]}</p>`;
+            }
+        }
+        
+        // 更新状态消息，显示可用日期数量
+        if (availableDates.length > 0) {
+            uploadStatus.innerHTML = `<p style="color: green;">数据库中找到 ${availableDates.length} 个日期的数据</p>`;
+        }
+    } catch (error) {
+        console.error('更新可用日期失败:', error);
+        uploadStatus.innerHTML = `<p style="color: red;">更新可用日期失败: ${error.message}</p>`;
+    }
+}
+
 // 查询数据库获取当前日期的数据
 function queryDatabase() {
     if (!loadedDb) {
@@ -188,7 +391,9 @@ function queryDatabase() {
     
     try {
         const date = dateInput.value;
-        uploadStatus.innerHTML = `<p>正在查询 ${date} 的数据...</p>`;
+        const queryDate = flatpickrInstance.selectedDates[0] || new Date(date);
+        const dayOfWeek = getChineseDayOfWeek(queryDate);
+        uploadStatus.innerHTML = `<p>正在查询 ${dayOfWeek} ${date} 的数据...</p>`;
         
         // 构建查询
         const query = `
@@ -210,7 +415,9 @@ function queryDatabase() {
         const results = loadedDb.exec(query);
         
         if (results.length === 0 || results[0].values.length === 0) {
-            uploadStatus.innerHTML = `<p>没有找到 ${date} 的数据</p>`;
+            const noDataDate = flatpickrInstance.selectedDates[0] || new Date(date);
+            const dayOfWeek = getChineseDayOfWeek(noDataDate);
+            uploadStatus.innerHTML = `<p>没有找到 ${dayOfWeek} ${date} 的数据</p>`;
             renderChart([]);
             return;
         }
@@ -225,14 +432,40 @@ function queryDatabase() {
     }
 }
 
+// 合并相邻时间段
+function mergeIntervals(data, appName) {
+    if (data.length === 0) return [];
+    
+    // 按开始时间排序
+    const sorted = [...data].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const merged = [];
+    let current = sorted[0];
+    
+    for (let i = 1; i < sorted.length; i++) {
+        const row = sorted[i];
+        // 计算时间间隔（分钟）
+        const gap = (new Date(row.start_time) - new Date(current.end_time)) / (1000 * 60);
+        
+        // 根据应用名称和间隔时间决定是否合并
+        if (gap <= 3 || (appName === 'com.electron.lark.iron' && gap <= 10)) {
+            // 合并时间段
+            current.end_time = new Date(Math.max(
+                new Date(current.end_time).getTime(), 
+                new Date(row.end_time).getTime()
+            )).toISOString();
+        } else {
+            merged.push(current);
+            current = row;
+        }
+    }
+    merged.push(current);
+    return merged;
+}
+
 // 处理查询结果
 function processQueryResults(results) {
     const columns = results.columns; // ['app_name', 'start_time', 'end_time']
     const values = results.values;
-    
-    // 处理数据
-    const processedData = [];
-    const appUsage = {};
     
     // 首先将数据转换为对象数组
     const rawData = values.map(row => {
@@ -243,40 +476,85 @@ function processQueryResults(results) {
         return item;
     });
     
-    // 处理时间戳和应用名称
-    rawData.forEach(item => {
+    // 转换时间戳并过滤无效记录
+    let processedData = rawData.map(item => {
         // 转换时间戳，macOS 时间戳从 2001-01-01 开始
         const startTime = new Date((item.start_time + MACOS_EPOCH_OFFSET) * 1000);
         const endTime = new Date((item.end_time + MACOS_EPOCH_OFFSET) * 1000);
         
-        // 过滤结束时间早于开始时间的记录
-        if (endTime <= startTime) {
-            return;
+        // 添加上海时区信息（简化处理，JavaScript 处理时区比较复杂）
+        return {
+            app_name: item.app_name,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            // 计算相对分钟和使用时长
+            start_minutes: startTime.getHours() * 60 + startTime.getMinutes() + startTime.getSeconds() / 60,
+            duration: (endTime - startTime) / (1000 * 60)
+        };
+    });
+    
+    // 过滤结束时间早于开始时间的记录
+    processedData = processedData.filter(item => new Date(item.end_time) > new Date(item.start_time));
+    
+    // 按应用名称分组
+    const appGroups = {};
+    processedData.forEach(item => {
+        if (!appGroups[item.app_name]) {
+            appGroups[item.app_name] = [];
         }
-        
-        // 计算使用时长（分钟）
-        const durationMinutes = (endTime - startTime) / (1000 * 60);
-        
-        // 累计应用使用时长
+        appGroups[item.app_name].push(item);
+    });
+    
+    // 合并相邻时间段
+    let mergedData = [];
+    Object.entries(appGroups).forEach(([appName, group]) => {
+        const merged = mergeIntervals(group, appName);
+        mergedData = mergedData.concat(merged);
+    });
+    
+    // 重新计算相对分钟和使用时长（合并后需要更新）
+    mergedData = mergedData.map(item => {
+        const startTime = new Date(item.start_time);
+        const endTime = new Date(item.end_time);
+        return {
+            ...item,
+            start_minutes: startTime.getHours() * 60 + startTime.getMinutes() + startTime.getSeconds() / 60,
+            duration: (endTime - startTime) / (1000 * 60)
+        };
+    });
+    
+    // 计算每个应用的总使用时长
+    const appUsage = {};
+    mergedData.forEach(item => {
         if (!appUsage[item.app_name]) {
             appUsage[item.app_name] = 0;
         }
-        appUsage[item.app_name] += durationMinutes;
-        
-        // 添加到处理后的数据中
-        processedData.push({
-            app_name: getAppDisplayName(item.app_name),
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString()
-        });
+        appUsage[item.app_name] += item.duration;
     });
     
-    // 过滤总时长≥ 2 分钟的应用
-    const filteredData = processedData.filter(item => {
-        const appName = item.app_name;
-        const originalAppName = rawData.find(raw => getAppDisplayName(raw.app_name) === appName)?.app_name;
-        return originalAppName && appUsage[originalAppName] >= 2;
+    // 过滤总时长≥2分钟的应用
+    const filteredApps = Object.entries(appUsage)
+        .filter(([_, duration]) => duration >= 2)
+        .sort((a, b) => b[1] - a[1]) // 按总使用时长降序排序
+        .map(([appName]) => appName);
+    
+    // 过滤数据集
+    let filteredData = mergedData.filter(item => filteredApps.includes(item.app_name));
+    
+    // 按总使用时长排序
+    const appOrder = {};
+    filteredApps.forEach((app, index) => {
+        appOrder[app] = index;
     });
+    
+    filteredData = filteredData.map(item => ({
+        ...item,
+        y: appOrder[item.app_name],
+        app_name: getAppDisplayName(item.app_name) // 转换为显示名称
+    }));
+    
+    // 排序
+    filteredData.sort((a, b) => a.y - b.y);
     
     return filteredData;
 }
@@ -378,7 +656,7 @@ function renderChart(data) {
 
     // 获取当天的日期部分
     const dateStr = dateInput.value;
-    const baseDate = new Date(dateStr);
+    const baseDate = flatpickrInstance.selectedDates[0] || new Date(dateStr);
     
     // 计算数据中的最早开始时间和最晚结束时间
     let earliestStart = null;
@@ -589,8 +867,9 @@ function renderChart(data) {
     const statsInfo = calculateScreenTimeStats(data, earliestStart, latestEnd);
     
     // 将统计信息添加到图表中
+    const dayOfWeek = getChineseDayOfWeek(baseDate);
     option.title = {
-        text: `屏幕使用总时长: ${statsInfo.totalUsageFormatted}`,
+        text: `${dayOfWeek} ${dateStr} 屏幕使用总时长: ${statsInfo.totalUsageFormatted}`,
         left: 'center',
         top: 0,
         textStyle: {

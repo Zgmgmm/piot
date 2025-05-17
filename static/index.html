@@ -2,19 +2,24 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>屏幕使用时间统计</title>
+    <title>Mac屏幕使用时间统计</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <!-- Flatpickr 日期选择器 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- SQL.js 库用于在浏览器中解析SQLite文件 -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>屏幕使用时间统计</h1>
+        <h1>Mac屏幕使用时间统计</h1>
         
         <div id="file-upload-section" class="file-upload-section">
             <h3>上传数据库文件</h3>
-            <p>选择您的 knowledgeC.db 文件并点击“确认”按钮</p>
+            <p>选择你的 ~/Library/Application Support/Knowledge/knowledgeC.db 文件并点击“确认”按钮</p>
             <div class="upload-controls">
                 <input type="file" id="db-file" name="db-file" accept=".db">
                 <button type="button" id="upload-button">确认</button>
@@ -22,13 +27,17 @@
         </div>
         
         <div class="date-picker">
-            <label for="date">选择日期：</label>
-            <button id="prev-date" onclick="navigateDate(-1)">前一天</button>
-            <input type="date" id="date" value="{{ yesterday }}">
-            <button id="next-date" onclick="navigateDate(1)">后一天</button>
-            <button id="today-button" onclick="navigateToday()">今天</button>
-            <button id="query-button" onclick="queryDatabase()">查询</button>
-            <div id="upload-status"></div>
+            <div class="date-controls">
+                <button id="prev-date" class="date-nav-btn" onclick="navigateDate(-1)">前一天</button>
+                <div class="date-display">
+                    <input type="text" id="date" class="flatpickr" placeholder="选择日期" readonly>
+                    <span id="day-of-week" class="day-of-week"></span>
+                </div>
+                <button id="next-date" class="date-nav-btn" onclick="navigateDate(1)">后一天</button>
+                <button id="today-button" class="action-btn" onclick="navigateToday()">今天</button>
+                <button id="query-button" class="action-btn primary-btn" onclick="queryDatabase()">查询</button>
+            </div>
+            <div id="upload-status" class="status-message"></div>
         </div>
         <div id="chart-container"></div>
     </div>

@@ -8,13 +8,43 @@
     padding: 15px;
     background-color: #f5f5f5;
     border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-#date {
-    padding: 8px;
-    margin: 0 10px;
-    border: 1px solid #ddd;
+
+.date-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.date-display {
+    display: flex;
+    align-items: center;
+    background-color: white;
     border-radius: 4px;
+    padding: 0 5px;
+    border: 1px solid #ddd;
+    margin: 0 10px;
+    position: relative;
 }
+
+#date {
+    padding: 8px 10px;
+    border: none;
+    width: 120px;
+    font-size: 14px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.day-of-week {
+    font-weight: bold;
+    color: #666;
+    margin-left: 5px;
+    padding-right: 10px;
+}
+
 button {
     padding: 8px 16px;
     background-color: #4CAF50;
@@ -22,9 +52,44 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    transition: background-color 0.2s;
 }
+
 button:hover {
     background-color: #45a049;
+}
+
+.date-nav-btn {
+    background-color: #2196F3;
+    padding: 8px 12px;
+}
+
+.date-nav-btn:hover {
+    background-color: #0b7dda;
+}
+
+.action-btn {
+    background-color: #ff9800;
+}
+
+.action-btn:hover {
+    background-color: #e68a00;
+}
+
+.primary-btn {
+    background-color: #4CAF50;
+}
+
+.primary-btn:hover {
+    background-color: #45a049;
+}
+
+.status-message {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #e8f5e9;
+    color: #2e7d32;
 }
 #chart-container {
     margin-top: 20px;
