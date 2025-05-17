@@ -2,24 +2,35 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Mac屏幕使用时间统计</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mac屏幕使用时间统计 | Cyberpunk</title>
+    <!-- Modern fonts -->    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Flatpickr 日期选择器 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <!-- ECharts for visualization -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- SQL.js 库用于在浏览器中解析SQLite文件 -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Mac屏幕使用时间统计</h1>
+        <header>
+            <h1>Mac屏幕使用时间统计</h1>
+            <div class="subtitle">Cyberpunk Screen Time Tracker</div>
+        </header>
         
         <div id="file-upload-section" class="file-upload-section">
+            <div class="section-glow"></div>
             <h3>上传数据库文件</h3>
-            <p>选择你的 ~/Library/Application Support/Knowledge/knowledgeC.db 文件并点击“确认”按钮</p>
+            <p>选择你的 ~/Library/Application Support/Knowledge/knowledgeC.db 文件并点击"确认"按钮</p>
             <div class="upload-controls">
                 <input type="file" id="db-file" name="db-file" accept=".db">
                 <button type="button" id="upload-button">确认</button>
@@ -28,18 +39,38 @@
         
         <div class="date-picker">
             <div class="date-controls">
-                <button id="prev-date" class="date-nav-btn" onclick="navigateDate(-1)">前一天</button>
+                <button id="prev-date" class="date-nav-btn" onclick="navigateDate(-1)">
+                    <span class="btn-text">前一天</span>
+                </button>
                 <div class="date-display">
                     <input type="text" id="date" class="flatpickr" placeholder="选择日期" readonly>
                     <span id="day-of-week" class="day-of-week"></span>
                 </div>
-                <button id="next-date" class="date-nav-btn" onclick="navigateDate(1)">后一天</button>
-                <button id="today-button" class="action-btn" onclick="navigateToday()">今天</button>
-                <button id="query-button" class="action-btn primary-btn" onclick="queryDatabase()">查询</button>
+                <button id="next-date" class="date-nav-btn" onclick="navigateDate(1)">
+                    <span class="btn-text">后一天</span>
+                </button>
+                <button id="today-button" class="action-btn" onclick="navigateToday()">
+                    <span class="btn-text">今天</span>
+                </button>
+                <button id="query-button" class="action-btn primary-btn" onclick="queryDatabase()">
+                    <span class="btn-text">查询</span>
+                </button>
             </div>
             <div id="upload-status" class="status-message"></div>
         </div>
-        <div id="chart-container"></div>
+        
+        <div id="chart-container">
+            <div class="loading-overlay">
+                <div class="cyber-spinner"></div>
+                <div class="loading-text">加载中...</div>
+            </div>
+        </div>
+        
+        <footer class="app-footer">
+            <div class="footer-content">
+                <span class="footer-text">Cyberpunk Screen Time Tracker</span>
+            </div>
+        </footer>
     </div>
     <script src="/static/app.js"></script>
 </body>

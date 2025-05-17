@@ -40,7 +40,7 @@ function navigateDate(days) {
         uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先上传数据库文件</p>';
         return;
     }
-    
+
     // 获取可用日期列表
     try {
         const query = `
@@ -54,29 +54,29 @@ function navigateDate(days) {
         ORDER BY 
             date
         `;
-        
+
         const results = loadedDb.exec(query);
-        
+
         if (results.length === 0 || results[0].values.length === 0) {
             uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
             return;
         }
-        
+
         const availableDates = results[0].values.map(row => row[0]);
-        
+
         // 获取当前选中的日期
         const currentDate = flatpickrInstance.selectedDates[0] || new Date();
-        const formattedCurrentDate = currentDate.getFullYear() + '-' + 
-                                    String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                                    String(currentDate.getDate()).padStart(2, '0');
-        
+        const formattedCurrentDate = currentDate.getFullYear() + '-' +
+            String(currentDate.getMonth() + 1).padStart(2, '0') + '-' +
+            String(currentDate.getDate()).padStart(2, '0');
+
         // 找到当前日期在可用日期列表中的索引
         const currentIndex = availableDates.indexOf(formattedCurrentDate);
-        
+
         if (currentIndex !== -1) {
             // 如果当前日期在列表中，则导航到相应的日期
             const targetIndex = currentIndex + days;
-            
+
             if (targetIndex >= 0 && targetIndex < availableDates.length) {
                 // 如果目标索引有效，则选择该日期
                 flatpickrInstance.setDate(availableDates[targetIndex]);
@@ -110,12 +110,12 @@ function navigateToday() {
         uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先上传数据库文件</p>';
         return;
     }
-    
+
     const today = new Date();
-    const formattedToday = today.getFullYear() + '-' + 
-                          String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                          String(today.getDate()).padStart(2, '0');
-    
+    const formattedToday = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+
     // 检查今天是否有数据
     try {
         const query = `
@@ -126,9 +126,9 @@ function navigateToday() {
             AND date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '${formattedToday}'
             AND ZOBJECT.ZVALUESTRING IS NOT NULL
         `;
-        
+
         const results = loadedDb.exec(query);
-        
+
         if (results.length > 0 && results[0].values.length > 0 && results[0].values[0][0] > 0) {
             // 如果今天有数据，则直接选择今天
             flatpickrInstance.setDate(today);
@@ -148,9 +148,9 @@ function navigateToday() {
                 date DESC
             LIMIT 1
             `;
-            
+
             const dateResults = loadedDb.exec(dateQuery);
-            
+
             if (dateResults.length > 0 && dateResults[0].values.length > 0) {
                 const latestDate = dateResults[0].values[0][0];
                 flatpickrInstance.setDate(latestDate);
@@ -176,28 +176,33 @@ window.onload = function () {
     uploadButton = document.getElementById('upload-button');
     uploadStatus = document.getElementById('upload-status');
     dateInput = document.getElementById('date');
+
+    // Initialize loading state (only after DOM is fully loaded)
+    setTimeout(() => {
+        toggleLoading(false);
+    }, 0);
     
     // 添加事件监听器
     dbFileInput.addEventListener('change', handleFileSelect);
-    uploadButton.addEventListener('click', function() {
+    uploadButton.addEventListener('click', function () {
         if (uploadedFile) {
             processUploadedFile();
         } else {
             uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
         }
     });
-    
+
     // 初始化日期选择器
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     // 初始化 Flatpickr 日期选择器
     flatpickrInstance = flatpickr(dateInput, {
         locale: 'zh',
         dateFormat: 'Y-m-d',
         defaultDate: yesterday,
         disableMobile: true,
-        onChange: function(selectedDates, dateStr, instance) {
+        onChange: function (selectedDates, dateStr, instance) {
             if (selectedDates.length > 0) {
                 updateDayOfWeek(selectedDates[0]);
                 queryDatabase();
@@ -205,16 +210,16 @@ window.onload = function () {
         },
         disable: [] // 初始化为空数组，稍后会更新
     });
-    
+
     // 更新星期几显示
     updateDayOfWeek(yesterday);
-    
+
     // 初始化 SQL.js
     initializeSqlJs();
-    
+
     // 显示初始提示
     uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“处理文件”按钮</p>';
-    
+
     // 显示空图表
     renderChart([]);
 };
@@ -222,7 +227,7 @@ window.onload = function () {
 // 初始化 SQL.js
 function initializeSqlJs() {
     console.log('Initializing SQL.js...');
-    
+
     // 检查全局变量
     if (typeof window.initSqlJs === 'undefined') {
         console.error('SQL.js initializer not found');
@@ -231,20 +236,20 @@ function initializeSqlJs() {
         }
         return;
     }
-    
+
     // 使用正确的 CDN 路径
     window.initSqlJs({
         locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
-    }).then(function(sql) {
+    }).then(function (sql) {
         SQL = sql;
         sqlReady = true;
         console.log('SQL.js initialized successfully');
-        
+
         // 如果已有文件，自动处理
         if (uploadedFile && uploadStatus) {
             processUploadedFile();
         }
-    }).catch(function(err) {
+    }).catch(function (err) {
         console.error('Error initializing SQL.js', err);
         if (uploadStatus) {
             uploadStatus.innerHTML = '<p style="color: red;">SQL.js 初始化失败，请刷新页面重试</p>';
@@ -259,13 +264,13 @@ function handleFileSelect(event) {
         uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
         return;
     }
-    
+
     // 检查文件类型
     if (!file.name.endsWith('.db')) {
         uploadStatus.innerHTML = '<p style="color: red;">请选择 .db 格式的 SQLite 数据库文件</p>';
         return;
     }
-    
+
     uploadedFile = file;
     uploadStatus.innerHTML = `<p>文件 "${file.name}" 已选择，点击上传按钮开始处理</p>`;
 }
@@ -276,27 +281,27 @@ function processUploadedFile() {
         uploadStatus.innerHTML = '<p style="color: red;">SQL.js 还未准备好，请稍后再试</p>';
         return;
     }
-    
+
     if (!uploadedFile) {
         uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
         return;
     }
-    
+
     // 如果数据库已经加载，直接使用
     if (loadedDb) {
         queryDatabase();
         return;
     }
-    
+
     uploadStatus.innerHTML = '<p>正在加载数据库文件...</p>';
-    
+
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         try {
             const uInt8Array = new Uint8Array(e.target.result);
             loadedDb = new SQL.Database(uInt8Array); // 将数据库存储在全局变量中
             uploadStatus.innerHTML = '<p style="color: green;">数据库文件加载成功</p>';
-            
+
             // 数据库加载成功后更新可选日期并查询当前日期的数据
             updateAvailableDates();
             queryDatabase();
@@ -305,7 +310,7 @@ function processUploadedFile() {
             uploadStatus.innerHTML = `<p style="color: red;">处理数据库文件失败: ${error.message}</p>`;
         }
     };
-    reader.onerror = function() {
+    reader.onerror = function () {
         uploadStatus.innerHTML = '<p style="color: red;">读取文件失败</p>';
     };
     reader.readAsArrayBuffer(uploadedFile);
@@ -316,7 +321,7 @@ function updateAvailableDates() {
     if (!loadedDb) {
         return;
     }
-    
+
     try {
         // 构建查询，获取所有有数据的日期
         const query = `
@@ -330,48 +335,48 @@ function updateAvailableDates() {
         ORDER BY 
             date
         `;
-        
+
         // 执行查询
         const results = loadedDb.exec(query);
-        
+
         if (results.length === 0 || results[0].values.length === 0) {
             console.log('没有找到任何日期的数据');
             uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
             return;
         }
-        
+
         // 获取所有有数据的日期
         const availableDates = results[0].values.map(row => row[0]);
         console.log('可用日期:', availableDates);
-        
+
         // 创建一个函数，用于禁用没有数据的日期
         const disableUnavailableDates = (date) => {
             // 格式化日期为 YYYY-MM-DD
-            const formattedDate = date.getFullYear() + '-' + 
-                                 String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                                 String(date.getDate()).padStart(2, '0');
-            
+            const formattedDate = date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0');
+
             // 如果日期不在可用日期列表中，则禁用
             return !availableDates.includes(formattedDate);
         };
-        
+
         // 更新 Flatpickr 配置
         flatpickrInstance.set('disable', [disableUnavailableDates]);
-        
+
         // 如果当前选中的日期没有数据，则选择最近的有数据的日期
         const currentDate = flatpickrInstance.selectedDates[0];
         if (currentDate) {
-            const formattedCurrentDate = currentDate.getFullYear() + '-' + 
-                                        String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                                        String(currentDate.getDate()).padStart(2, '0');
-            
+            const formattedCurrentDate = currentDate.getFullYear() + '-' +
+                String(currentDate.getMonth() + 1).padStart(2, '0') + '-' +
+                String(currentDate.getDate()).padStart(2, '0');
+
             if (!availableDates.includes(formattedCurrentDate) && availableDates.length > 0) {
                 // 选择第一个可用日期
                 flatpickrInstance.setDate(availableDates[0]);
                 uploadStatus.innerHTML = `<p style="color: blue;">当前日期无数据，已自动选择有数据的日期: ${availableDates[0]}</p>`;
             }
         }
-        
+
         // 更新状态消息，显示可用日期数量
         if (availableDates.length > 0) {
             uploadStatus.innerHTML = `<p style="color: green;">数据库中找到 ${availableDates.length} 个日期的数据</p>`;
@@ -388,69 +393,77 @@ function queryDatabase() {
         uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先点击“确认”按钮</p>';
         return;
     }
-    
-    try {
-        const date = dateInput.value;
-        const queryDate = flatpickrInstance.selectedDates[0] || new Date(date);
-        const dayOfWeek = getChineseDayOfWeek(queryDate);
-        uploadStatus.innerHTML = `<p>正在查询 ${dayOfWeek} ${date} 的数据...</p>`;
-        
-        // 构建查询
-        const query = `
-        SELECT 
-            ZOBJECT.ZVALUESTRING as app_name,
-            ZOBJECT.ZSTARTDATE as start_time,
-            ZOBJECT.ZENDDATE as end_time
-        FROM 
-            ZOBJECT
-        WHERE 
-            ZSTREAMNAME = '/app/usage' 
-            AND date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '${date}'
-            AND ZOBJECT.ZVALUESTRING IS NOT NULL
-        ORDER BY 
-            ZOBJECT.ZSTARTDATE
-        `;
-        
-        // 执行查询
-        const results = loadedDb.exec(query);
-        
-        if (results.length === 0 || results[0].values.length === 0) {
-            const noDataDate = flatpickrInstance.selectedDates[0] || new Date(date);
-            const dayOfWeek = getChineseDayOfWeek(noDataDate);
-            uploadStatus.innerHTML = `<p>没有找到 ${dayOfWeek} ${date} 的数据</p>`;
-            renderChart([]);
-            return;
+
+    toggleLoading(true); // Show loading
+
+    // Add a small delay to allow the loading animation to be visible
+    setTimeout(() => {
+        try {
+            const date = dateInput.value;
+            const queryDate = flatpickrInstance.selectedDates[0] || new Date(date);
+            const dayOfWeek = getChineseDayOfWeek(queryDate);
+            uploadStatus.innerHTML = `<p>正在查询 ${dayOfWeek} ${date} 的数据...</p>`;
+
+            // 构建查询
+            const query = `
+            SELECT 
+                ZOBJECT.ZVALUESTRING as app_name,
+                ZOBJECT.ZSTARTDATE as start_time,
+                ZOBJECT.ZENDDATE as end_time
+            FROM 
+                ZOBJECT
+            WHERE 
+                ZSTREAMNAME = '/app/usage' 
+                AND date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '${date}'
+                AND ZOBJECT.ZVALUESTRING IS NOT NULL
+            ORDER BY 
+                ZOBJECT.ZSTARTDATE
+            `;
+
+            // 执行查询
+            const results = loadedDb.exec(query);
+
+            if (results.length === 0 || results[0].values.length === 0) {
+                const noDataDate = flatpickrInstance.selectedDates[0] || new Date(date);
+                const dayOfWeek = getChineseDayOfWeek(noDataDate);
+                uploadStatus.innerHTML = `<p>没有找到 ${dayOfWeek} ${date} 的数据</p>`;
+                renderChart([]);
+                return;
+            }
+
+            // 处理查询结果
+            const data = processQueryResults(results[0]);
+            renderChart(data);
+            uploadStatus.innerHTML = `<p style="color: green;">数据加载成功，显示 ${data.length} 条记录</p>`;
+        } catch (error) {
+            console.error('查询数据库失败:', error);
+            uploadStatus.innerHTML = `<p style="color: red;">查询数据库失败: ${error.message}</p>`;
         }
-        
-        // 处理查询结果
-        const data = processQueryResults(results[0]);
-        renderChart(data);
-        uploadStatus.innerHTML = `<p style="color: green;">数据加载成功，显示 ${data.length} 条记录</p>`;
-    } catch (error) {
-        console.error('查询数据库失败:', error);
-        uploadStatus.innerHTML = `<p style="color: red;">查询数据库失败: ${error.message}</p>`;
-    }
+        // When complete, hide loading
+        toggleLoading(false);
+    }, 300);
+
 }
 
 // 合并相邻时间段
 function mergeIntervals(data, appName) {
     if (data.length === 0) return [];
-    
+
     // 按开始时间排序
     const sorted = [...data].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     const merged = [];
     let current = sorted[0];
-    
+
     for (let i = 1; i < sorted.length; i++) {
         const row = sorted[i];
         // 计算时间间隔（分钟）
         const gap = (new Date(row.start_time) - new Date(current.end_time)) / (1000 * 60);
-        
+
         // 根据应用名称和间隔时间决定是否合并
         if (gap <= 3 || (appName === 'com.electron.lark.iron' && gap <= 10)) {
             // 合并时间段
             current.end_time = new Date(Math.max(
-                new Date(current.end_time).getTime(), 
+                new Date(current.end_time).getTime(),
                 new Date(row.end_time).getTime()
             )).toISOString();
         } else {
@@ -466,7 +479,7 @@ function mergeIntervals(data, appName) {
 function processQueryResults(results) {
     const columns = results.columns; // ['app_name', 'start_time', 'end_time']
     const values = results.values;
-    
+
     // 首先将数据转换为对象数组
     const rawData = values.map(row => {
         const item = {};
@@ -475,13 +488,13 @@ function processQueryResults(results) {
         });
         return item;
     });
-    
+
     // 转换时间戳并过滤无效记录
     let processedData = rawData.map(item => {
         // 转换时间戳，macOS 时间戳从 2001-01-01 开始
         const startTime = new Date((item.start_time + MACOS_EPOCH_OFFSET) * 1000);
         const endTime = new Date((item.end_time + MACOS_EPOCH_OFFSET) * 1000);
-        
+
         // 添加上海时区信息（简化处理，JavaScript 处理时区比较复杂）
         return {
             app_name: item.app_name,
@@ -492,10 +505,10 @@ function processQueryResults(results) {
             duration: (endTime - startTime) / (1000 * 60)
         };
     });
-    
+
     // 过滤结束时间早于开始时间的记录
     processedData = processedData.filter(item => new Date(item.end_time) > new Date(item.start_time));
-    
+
     // 按应用名称分组
     const appGroups = {};
     processedData.forEach(item => {
@@ -504,14 +517,14 @@ function processQueryResults(results) {
         }
         appGroups[item.app_name].push(item);
     });
-    
+
     // 合并相邻时间段
     let mergedData = [];
     Object.entries(appGroups).forEach(([appName, group]) => {
         const merged = mergeIntervals(group, appName);
         mergedData = mergedData.concat(merged);
     });
-    
+
     // 重新计算相对分钟和使用时长（合并后需要更新）
     mergedData = mergedData.map(item => {
         const startTime = new Date(item.start_time);
@@ -522,7 +535,7 @@ function processQueryResults(results) {
             duration: (endTime - startTime) / (1000 * 60)
         };
     });
-    
+
     // 计算每个应用的总使用时长
     const appUsage = {};
     mergedData.forEach(item => {
@@ -531,31 +544,31 @@ function processQueryResults(results) {
         }
         appUsage[item.app_name] += item.duration;
     });
-    
+
     // 过滤总时长≥2分钟的应用
     const filteredApps = Object.entries(appUsage)
         .filter(([_, duration]) => duration >= 2)
         .sort((a, b) => b[1] - a[1]) // 按总使用时长降序排序
         .map(([appName]) => appName);
-    
+
     // 过滤数据集
     let filteredData = mergedData.filter(item => filteredApps.includes(item.app_name));
-    
+
     // 按总使用时长排序
     const appOrder = {};
     filteredApps.forEach((app, index) => {
         appOrder[app] = index;
     });
-    
+
     filteredData = filteredData.map(item => ({
         ...item,
         y: appOrder[item.app_name],
         app_name: getAppDisplayName(item.app_name) // 转换为显示名称
     }));
-    
+
     // 排序
     filteredData.sort((a, b) => a.y - b.y);
-    
+
     return filteredData;
 }
 
@@ -565,7 +578,7 @@ function getAppDisplayName(appName) {
         'com.apple.finder': 'Finder',
         'com.tencent.xinWeChat': '微信',
         'com.googlecode.iterm2': 'Iterm2',
-        'com.electron.lark.iron': '飞书会议', 
+        'com.electron.lark.iron': '飞书会议',
         'com.jetbrains.goland': 'Goland',
         'com.electron.lark': '飞书',
         'com.google.Chrome': 'Chrome',
@@ -576,12 +589,12 @@ function getAppDisplayName(appName) {
         'com.tencent.QQMusicMac': 'QQ音乐',
         'com.apple.systempreferences': '系统设置',
     };
-    
+
     // 如果在映射中找到则直接返回
     if (appName in nameMapping) {
         return nameMapping[appName];
     }
-    
+
     // 其他情况返回原始名称
     return appName;
 }
@@ -593,7 +606,7 @@ function fetchData() {
         queryDatabase();
         return;
     }
-    
+
     // 如果有上传的文件但数据库还没加载，则处理文件
     if (uploadedFile) {
         if (sqlReady) {
@@ -628,57 +641,62 @@ function renderChart(data) {
     data.forEach(item => {
         const startTime = new Date(item.start_time);
         const endTime = new Date(item.end_time);
-        
+
         if (isNaN(startTime) || isNaN(endTime)) {
             return;
         }
-        
+
         const durationMinutes = Math.round((endTime - startTime) / (1000 * 60));
-        
+
         if (!appUsageMap[item.app_name]) {
             appUsageMap[item.app_name] = 0;
         }
         appUsageMap[item.app_name] += durationMinutes;
     });
-    
+
     // 提取唯一分类并按使用时长排序（从高到低）
     const categories = [...new Set(data.map(item => item.app_name))]
         .sort((a, b) => appUsageMap[b] - appUsageMap[a]);
-    
+
     // 为不同应用分配不同颜色
     const colorMap = {
-        '飞书': '#3A75C4',      // 蓝色
-        'Chrome': '#4CAF50',   // 绿色
-        '微信': '#9E9E9E',      // 灰色
-        '飞书会议': '#8D6E63',  // 棕色
-        'Goland': '#03A9F4'    // 浅蓝色
+        '飞书': '#00FFFF',      // Cyan
+        'Chrome': '#FF00FF',   // Magenta
+        '微信': '#00FF00',      // Green
+        '飞书会议': '#FF3366',  // Neon pink
+        'Goland': '#33CCFF'    // Light blue
+    };
+    // Generate dynamic colors for other apps
+    const generateNeonColor = (index) => {
+        const hue = (index * 60) % 360;
+        return `hsl(${hue}, 100%, 70%)`;
     };
 
     // 获取当天的日期部分
     const dateStr = dateInput.value;
     const baseDate = flatpickrInstance.selectedDates[0] || new Date(dateStr);
-    
+
     // 计算数据中的最早开始时间和最晚结束时间
     let earliestStart = null;
     let latestEnd = null;
-    
+
     data.forEach(item => {
         const startTime = new Date(item.start_time);
         const endTime = new Date(item.end_time);
-        
+
         if (isNaN(startTime) || isNaN(endTime)) {
             return;
         }
-        
+
         if (earliestStart === null || startTime < earliestStart) {
             earliestStart = startTime;
         }
-        
+
         if (latestEnd === null || endTime > latestEnd) {
             latestEnd = endTime;
         }
     });
-    
+
     // 如果没有有效数据，使用默认范围
     if (earliestStart === null || latestEnd === null) {
         earliestStart = new Date(baseDate.setHours(10, 0, 0, 0));
@@ -687,36 +705,41 @@ function renderChart(data) {
         // 重置baseDate，因为上面的setHours可能已经修改了它
         baseDate.setHours(0, 0, 0, 0);
     }
-    
+
     // 添加30分钟的缓冲区
     const bufferMs = 30 * 60 * 1000; // 30分钟，单位毫秒
     earliestStart = new Date(earliestStart.getTime() - bufferMs);
     latestEnd = new Date(latestEnd.getTime() + bufferMs);
-    
+
     // 处理数据
     const seriesData = [];
     data.forEach(item => {
         const startTime = new Date(item.start_time);
         const endTime = new Date(item.end_time);
-        
+
         if (isNaN(startTime) || isNaN(endTime)) {
             console.error('无效的时间戳:', item);
             return;
         }
-        
+
         // 计算分钟差
         const durationMinutes = Math.round((endTime - startTime) / (1000 * 60));
-        
+
+        // When setting item style in seriesData
         seriesData.push({
             name: item.app_name,
             value: [
                 item.app_name,
                 startTime,
                 endTime,
-                `${durationMinutes}m`  // 显示分钟数
+                `${durationMinutes}m`
             ],
             itemStyle: {
-                color: colorMap[item.app_name] || `hsl(${(categories.indexOf(item.app_name) * 60) % 360}, 70%, 60%)`
+                color: colorMap[item.app_name] || generateNeonColor(categories.indexOf(item.app_name)),
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1,
+                shadowBlur: 5,
+                shadowColor: colorMap[item.app_name] || generateNeonColor(categories.indexOf(item.app_name))
             }
         });
     });
@@ -724,12 +747,30 @@ function renderChart(data) {
     // 构建图表配置
     const option = {
         tooltip: {
-            formatter: function(params) {
-                return `${params.name}<br/>` +
-                       `开始: ${new Date(params.value[1]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}<br/>` +
-                       `结束: ${new Date(params.value[2]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}<br/>` +
-                       `时长: ${params.value[3]}`;
-            }
+            formatter: function (params) {
+                return `<div style="padding: 8px;">
+                    <div style="font-weight: bold; color: ${params.color}; margin-bottom: 5px; font-size: 14px;">${params.name}</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                        <span style="color: #aaa;">开始:</span>
+                        <span>${new Date(params.value[1]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                        <span style="color: #aaa;">结束:</span>
+                        <span>${new Date(params.value[2]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span style="color: #aaa;">时长:</span>
+                        <span>${params.value[3]}</span>
+                    </div>
+                </div>`;
+            },
+            backgroundColor: 'rgba(10, 10, 18, 0.8)',
+            borderColor: 'rgba(0, 255, 255, 0.3)',
+            borderWidth: 1,
+            textStyle: {
+                color: '#fff'
+            },
+            extraCssText: 'backdrop-filter: blur(5px); border-radius: 8px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);'
         },
         grid: {
             height: categories.length * 40,
@@ -737,22 +778,31 @@ function renderChart(data) {
             left: '3%',
             right: '3%'
         },
+        // Enhanced axis styling
         xAxis: {
             type: 'time',
             min: earliestStart.getTime(),
             max: latestEnd.getTime(),
             axisLabel: {
-                formatter: function(value) {
+                formatter: function (value) {
                     const date = new Date(value);
                     return date.getHours() + ':' + (date.getMinutes() < 10 ? '00' : '30');
                 },
-                interval: 30 * 60 * 1000 // 30分钟间隔
+                interval: 30 * 60 * 1000, // 30分钟间隔
+                textStyle: {
+                    color: 'rgba(0, 255, 255, 0.8)'
+                }
             },
             splitLine: {
                 show: true,
                 lineStyle: {
                     type: 'dashed',
-                    color: '#ddd'
+                    color: 'rgba(0, 255, 255, 0.15)'
+                }
+            },
+            axisLine: {
+                lineStyle: {
+                    color: 'rgba(0, 255, 255, 0.3)'
                 }
             }
         },
@@ -760,13 +810,13 @@ function renderChart(data) {
             type: 'category',
             data: categories,
             axisLabel: {
-                formatter: function(value) {
+                formatter: function (value) {
                     // 显示应用名称和总使用时长
                     const totalMinutes = appUsageMap[value];
                     const hours = Math.floor(totalMinutes / 60);
                     const minutes = totalMinutes % 60;
-                    const timeStr = hours > 0 ? 
-                        `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` : 
+                    const timeStr = hours > 0 ?
+                        `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` :
                         `${minutes}m`;
                     // 使用HTML标签加粗应用名称
                     return `{bold|${value}} {time|(${timeStr})}`;
@@ -775,35 +825,55 @@ function renderChart(data) {
                     bold: {
                         fontWeight: 'bold',
                         fontSize: 14,
-                        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif'
+                        fontFamily: 'Inter, Poppins, sans-serif',
+                        color: '#fff'
                     },
                     time: {
                         fontSize: 12,
-                        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
-                        color: '#666'
+                        fontFamily: 'Inter, Poppins, sans-serif',
+                        color: 'rgba(255, 255, 255, 0.7)'
                     }
+                }
+            },
+            axisLine: {
+                lineStyle: {
+                    color: 'rgba(0, 255, 255, 0.3)'
+                }
+            },
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type: 'dashed',
+                    color: 'rgba(0, 255, 255, 0.1)'
                 }
             },
             inverse: true
         },
+        // Add animation
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'cubicOut',
+        animationDelay: function (idx) {
+            return idx * 50;
+        },
         series: [{
             type: 'custom',
-            renderItem: function(params, api) {
+            renderItem: function (params, api) {
                 const categoryIndex = api.value(0);
                 const start = api.coord([api.value(1), api.value(0)]);
                 const end = api.coord([api.value(2), api.value(0)]);
                 const height = api.size([0, 1])[1] * 0.6;
-                
+
                 const rectShape = {
                     x: start[0],
                     y: start[1] - height / 2,
                     width: Math.max(end[0] - start[0], 2), // 确保至少有2px宽度
                     height: height
                 };
-                
+
                 // 计算文本是否能放入矩形
                 const durationText = api.value(3);
-                
+
                 // 将分钟数转换为小时和分钟格式（如果超过60分钟）
                 let formattedDuration = durationText;
                 if (durationText.endsWith('m')) {
@@ -814,14 +884,14 @@ function renderChart(data) {
                         formattedDuration = hours + 'h' + (remainingMinutes > 0 ? ' ' + remainingMinutes + 'm' : '');
                     }
                 }
-                
+
                 const rectWidth = rectShape.width;
                 const fontSize = 12;
                 const textWidth = formattedDuration.length * fontSize * 0.6;
-                
+
                 // 只有当矩形宽度足够大时才显示文本
                 const showLabel = rectWidth > textWidth + 2;
-                
+
                 return {
                     type: 'group',
                     children: [
@@ -836,7 +906,7 @@ function renderChart(data) {
                             type: 'text',
                             style: {
                                 text: formattedDuration,
-                                textFont: api.font({fontSize: fontSize}),
+                                textFont: api.font({ fontSize: fontSize }),
                                 textFill: '#fff',
                                 textAlign: 'center',
                                 textVerticalAlign: 'middle'
@@ -850,10 +920,10 @@ function renderChart(data) {
                 };
             },
             dimensions: [
-                {name: 'category', type: 'ordinal'},
-                {name: 'start', type: 'time'},
-                {name: 'end', type: 'time'},
-                {name: 'duration', type: 'ordinal'}
+                { name: 'category', type: 'ordinal' },
+                { name: 'start', type: 'time' },
+                { name: 'end', type: 'time' },
+                { name: 'duration', type: 'ordinal' }
             ],
             encode: {
                 x: [1, 2],
@@ -865,7 +935,7 @@ function renderChart(data) {
 
     // 计算屏幕使用统计信息
     const statsInfo = calculateScreenTimeStats(data, earliestStart, latestEnd);
-    
+
     // 将统计信息添加到图表中
     const dayOfWeek = getChineseDayOfWeek(baseDate);
     option.title = {
@@ -876,25 +946,25 @@ function renderChart(data) {
             fontSize: 16
         }
     };
-    
+
     // 如果有显著的空闲时段，添加空闲时段背景
     if (statsInfo.significantIdlePeriods.length > 0) {
         // 为每个空闲时段创建一个空闲数据系列
         statsInfo.significantIdlePeriods.forEach((period, index) => {
             // 计算时间段的时长
             const durationMinutes = Math.round((period.end - period.start) / (1000 * 60));
-            
+
             // 准备要显示的文本，根据不同的位置显示不同的信息
             let displayText;
-            
+
             if (index === 0) {
                 // 第一个空闲时段显示结束时间
                 const endTime = new Date(period.end);
-                displayText = endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                displayText = endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } else if (index === statsInfo.significantIdlePeriods.length - 1) {
                 // 最后一个空闲时段显示开始时间
                 const startTime = new Date(period.start);
-                displayText = startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                displayText = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } else {
                 // 其他空闲时段显示时长，格式与应用使用时段保持一致
                 if (durationMinutes >= 60) {
@@ -905,41 +975,35 @@ function renderChart(data) {
                     displayText = durationMinutes + 'm';
                 }
             }
-            
+
             // 创建一个空闲区域数据系列
             const idleAreaSeries = {
                 name: `空闲${index + 1}`,
                 type: 'custom',
-                renderItem: function(params, api) {
+                renderItem: function (params, api) {
                     const coordSys = params.coordSys;
                     const width = api.size([0, 0])[0];
                     const height = coordSys.height;
-                    
-                    // 计算空闲区域的位置
+
+                    // Calculate idle area position
                     const startPoint = api.coord([period.start, 0]);
                     const endPoint = api.coord([period.end, 0]);
-                    
+
                     if (!startPoint || !endPoint) {
                         return {
                             type: 'group',
                             children: []
                         };
                     }
-                    
-                    // 创建空闲区域矩形
+
+                    // Create idle area rectangle with cyberpunk style
                     const rectShape = {
                         x: startPoint[0],
                         y: coordSys.y,
                         width: endPoint[0] - startPoint[0],
                         height: height
                     };
-                    
-                    // 创建文本的位置（在空闲区域的上方外部）
-                    const textPosition = [
-                        startPoint[0] + (endPoint[0] - startPoint[0]) / 2,
-                        coordSys.y - 15  // 将文本位置移到图表区域上方
-                    ];
-                    
+
                     return {
                         type: 'group',
                         children: [
@@ -947,8 +1011,9 @@ function renderChart(data) {
                                 type: 'rect',
                                 shape: rectShape,
                                 style: {
-                                    fill: 'rgba(220, 220, 220, 0.4)',
-                                    stroke: 'none'
+                                    fill: 'rgba(100, 100, 255, 0.1)',
+                                    stroke: 'rgba(100, 100, 255, 0.3)',
+                                    lineWidth: 1
                                 },
                                 silent: true
                             },
@@ -959,9 +1024,13 @@ function renderChart(data) {
                                     textAlign: 'center',
                                     textVerticalAlign: 'middle',
                                     fontSize: 12,
-                                    fill: '#666'
+                                    fill: 'rgba(100, 100, 255, 0.8)',
+                                    fontFamily: 'Inter, sans-serif'
                                 },
-                                position: textPosition,
+                                position: [
+                                    startPoint[0] + (endPoint[0] - startPoint[0]) / 2,
+                                    coordSys.y - 15
+                                ],
                                 silent: true
                             }
                         ]
@@ -970,23 +1039,24 @@ function renderChart(data) {
                 data: [0],
                 z: -1
             };
-            
+
             // 将该系列添加到图表中
             option.series.push(idleAreaSeries);
         });
-        
-        // 添加提示信息
+
+        // Update idle tooltip styling
         const idleTooltip = document.createElement('div');
         idleTooltip.className = 'idle-tooltip';
         idleTooltip.innerHTML = `<p><span class="idle-marker"></span> 空闲时段 (${statsInfo.significantIdlePeriods.length}个, 15分钟以上)</p>`;
         chartContainer.appendChild(idleTooltip);
+
     }
-    
+
     // 设置并渲染图表
     newChart.setOption(option);
-    
+
     // 响应窗口大小变化
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         newChart.resize();
     });
 }
@@ -1001,15 +1071,15 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
             app: item.app_name
         };
     }).sort((a, b) => a.start - b.start);
-    
+
     // 合并重叠的时间段
     const mergedRanges = [];
     if (timeRanges.length > 0) {
-        let currentRange = {...timeRanges[0]};
-        
+        let currentRange = { ...timeRanges[0] };
+
         for (let i = 1; i < timeRanges.length; i++) {
             const range = timeRanges[i];
-            
+
             // 如果当前时间段与合并中的时间段重叠
             if (range.start <= currentRange.end) {
                 // 更新结束时间为较晚的时间
@@ -1017,32 +1087,32 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
             } else {
                 // 不重叠，保存当前合并的时间段并开始新的合并
                 mergedRanges.push(currentRange);
-                currentRange = {...range};
+                currentRange = { ...range };
             }
         }
-        
+
         // 添加最后一个合并的时间段
         mergedRanges.push(currentRange);
     }
-    
+
     // 计算总使用时长（毫秒）
     const totalUsageMs = mergedRanges.reduce((total, range) => {
         return total + (range.end - range.start);
     }, 0);
-    
+
     // 转换为小时和分钟
     const totalMinutes = Math.round(totalUsageMs / (1000 * 60));
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    const totalUsageFormatted = hours > 0 ? 
-        `${hours}小时${minutes > 0 ? ` ${minutes}分钟` : ''}` : 
+    const totalUsageFormatted = hours > 0 ?
+        `${hours}小时${minutes > 0 ? ` ${minutes}分钟` : ''}` :
         `${minutes}分钟`;
-    
+
     // 计算空闲时段
     const idlePeriods = [];
     const dayStart = earliestStart.getTime();
     const dayEnd = latestEnd.getTime();
-    
+
     // 如果没有使用记录，整天都是空闲
     if (mergedRanges.length === 0) {
         idlePeriods.push({
@@ -1057,7 +1127,7 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
                 end: mergedRanges[0].start
             });
         }
-        
+
         // 检查使用时段之间的空闲
         for (let i = 0; i < mergedRanges.length - 1; i++) {
             if (mergedRanges[i + 1].start > mergedRanges[i].end) {
@@ -1067,7 +1137,7 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
                 });
             }
         }
-        
+
         // 检查最后一个使用时段到一天结束之间是否有空闲
         const lastRange = mergedRanges[mergedRanges.length - 1];
         if (lastRange.end < dayEnd) {
@@ -1077,12 +1147,12 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
             });
         }
     }
-    
+
     // 过滤掉太短的空闲时段（小于15分钟）
     const significantIdlePeriods = idlePeriods.filter(period => {
         return (period.end - period.start) >= 15 * 60 * 1000; // 15分钟
     });
-    
+
     return {
         totalUsageMs,
         totalMinutes,
@@ -1090,4 +1160,16 @@ function calculateScreenTimeStats(data, earliestStart, latestEnd) {
         mergedRanges,
         significantIdlePeriods
     };
+}
+
+// Add this function to show/hide loading overlay
+function toggleLoading(show) {
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (!loadingOverlay) return; // Safely handle if the element doesn't exist yet
+    
+    if (show) {
+        loadingOverlay.classList.add('active');
+    } else {
+        loadingOverlay.classList.remove('active');
+    }
 }

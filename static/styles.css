@@ -1,119 +1,309 @@
+/* Global styles and variables */
+:root {
+    --primary-neon: #0ff;
+    --secondary-neon: #f0f;
+    --tertiary-neon: #0f0;
+    --bg-dark: #0a0a12;
+    --bg-darker: #050508;
+    --bg-card: rgba(20, 20, 30, 0.7);
+    --text-primary: #fff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --border-radius: 12px;
+    --glow-small: 0 0 5px rgba(0, 255, 255, 0.5);
+    --glow-medium: 0 0 15px rgba(0, 255, 255, 0.3);
+    --glass-bg: rgba(30, 30, 50, 0.3);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    transition: all 0.25s ease;
+}
+
+body {
+    font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 255, 255, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 20%),
+        linear-gradient(to bottom, var(--bg-dark), var(--bg-darker));
+    background-attachment: fixed;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+    position: relative;
 }
-.date-picker {
-    margin: 20px 0;
-    padding: 15px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+/* Header and title styling */
+h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--primary-neon), var(--secondary-neon));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: var(--glow-small);
+    padding-bottom: 10px;
+    position: relative;
 }
 
+h1::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
+    box-shadow: var(--glow-small);
+}
+
+h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-neon);
+    text-shadow: var(--glow-small);
+}
+
+/* Date picker section */
+.date-picker {
+    margin: 20px 0;
+    padding: 20px;
+    background: var(--glass-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Date controls styling */
 .date-controls {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
 }
 
+.date-picker::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.05), transparent);
+    transform: rotate(45deg);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Date display styling */
 .date-display {
     display: flex;
     align-items: center;
-    background-color: white;
-    border-radius: 4px;
-    padding: 0 5px;
-    border: 1px solid #ddd;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius);
+    padding: 0 10px;
+    border: 1px solid var(--primary-neon);
     margin: 0 10px;
     position: relative;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    min-width: 180px;
+    justify-content: center;
 }
 
 #date {
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: none;
-    width: 120px;
-    font-size: 14px;
+    width: 130px;
+    font-size: 16px;
     background: transparent;
     cursor: pointer;
+    color: var(--text-primary);
+    text-align: center;
+    font-weight: 500;
 }
 
 .day-of-week {
     font-weight: bold;
-    color: #666;
-    margin-left: 5px;
+    color: var(--primary-neon);
+    margin-left: 8px;
     padding-right: 10px;
+    text-shadow: var(--glow-small);
+    letter-spacing: 1px;
 }
 
+/* Button styling */
 button {
-    padding: 8px 16px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    padding: 10px 18px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--primary-neon);
+    border: 1px solid var(--primary-neon);
+    border-radius: var(--border-radius);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+    transition: all 0.5s ease;
+}
+
+button:hover::before {
+    left: 100%;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Button hover states */
+button:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
 }
 
 .date-nav-btn {
-    background-color: #2196F3;
-    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px 15px;
+    color: var(--tertiary-neon);
+    border-color: var(--tertiary-neon);
 }
 
 .date-nav-btn:hover {
-    background-color: #0b7dda;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
 }
 
 .action-btn {
-    background-color: #ff9800;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--secondary-neon);
+    border-color: var(--secondary-neon);
 }
 
 .action-btn:hover {
-    background-color: #e68a00;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
 }
 
 .primary-btn {
-    background-color: #4CAF50;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--primary-neon);
+    border-color: var(--primary-neon);
+    font-weight: 600;
 }
 
 .primary-btn:hover {
-    background-color: #45a049;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+    transform: translateY(-3px);
 }
 
+/* Status message styling */
 .status-message {
-    margin-top: 10px;
-    padding: 8px;
-    border-radius: 4px;
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-#chart-container {
-    margin-top: 20px;
-    padding: 15px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    width: 100%;
-    height: 600px;
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--primary-neon);
+    text-align: center;
+    border-left: 3px solid var(--primary-neon);
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    box-shadow: var(--glow-small);
+    animation: fadeIn 0.3s ease-in-out;
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Chart container styling */
+#chart-container {
+    margin-top: 25px;
+    padding: 20px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    width: 100%;
+    height: 650px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+#chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
+    box-shadow: var(--glow-small);
+}
+
+#chart-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
+    box-shadow: var(--glow-small);
+}
+
+/* Idle tooltip styling */
 .idle-tooltip {
-    margin-top: 10px;
+    margin-top: 15px;
     text-align: center;
-    font-size: 12px;
-    color: #666;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
 }
 
 .idle-marker {
     display: inline-block;
     width: 12px;
     height: 12px;
-    background-color: rgba(220, 220, 220, 0.8);
+    background-color: rgba(100, 100, 255, 0.5);
     border-radius: 2px;
-    margin-right: 5px;
+    margin-right: 8px;
+    box-shadow: 0 0 5px rgba(100, 100, 255, 0.5);
+    vertical-align: middle;
 }
 
 /* 数据来源选择器样式 */
@@ -136,51 +326,271 @@ button:hover {
     padding: 5px 0;
 }
 
+/* File upload section styling */
 .file-upload-section {
-    background-color: #f0f7ff;
-    padding: 15px;
-    border-radius: 6px;
-    border: 1px dashed #a0c8ff;
-    margin: 20px 0;
+    background-color: var(--glass-bg);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--glass-border);
+    margin: 25px 0;
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+    animation: borderGlow 4s infinite alternate;
+}
+
+@keyframes borderGlow {
+    0% { border-color: var(--primary-neon); box-shadow: 0 0 10px rgba(0, 255, 255, 0.2); }
+    50% { border-color: var(--secondary-neon); box-shadow: 0 0 10px rgba(255, 0, 255, 0.2); }
+    100% { border-color: var(--tertiary-neon); box-shadow: 0 0 10px rgba(0, 255, 0, 0.2); }
 }
 
 .file-upload-section h3 {
     margin-top: 0;
-    color: #0066cc;
+    color: var(--primary-neon);
+    text-shadow: var(--glow-small);
+    font-size: 1.4rem;
+    letter-spacing: 0.5px;
 }
 
 .file-upload-section p {
-    margin-bottom: 15px;
-    color: #555;
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
 }
 
 .upload-controls {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 15px;
+    margin-bottom: 15px;
+    justify-content: center;
 }
 
 #db-file {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: white;
+    padding: 12px;
+    border: 1px solid var(--primary-neon);
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 0, 0, 0.3);
+    color: var(--text-primary);
+    box-shadow: var(--glow-small);
+    cursor: pointer;
+    font-family: 'Inter', 'Poppins', sans-serif;
+}
+
+#db-file::-webkit-file-upload-button {
+    visibility: hidden;
+    display: none;
+}
+
+#db-file::before {
+    content: '选择文件';
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--primary-neon);
+    border: 1px solid var(--primary-neon);
+    border-radius: var(--border-radius);
+    padding: 8px 12px;
+    outline: none;
+    white-space: nowrap;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    margin-right: 15px;
+    transition: all 0.3s ease;
+}
+
+#db-file:hover::before {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
 }
 
 #upload-button {
-    background-color: #2196F3;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: var(--primary-neon);
+    border-color: var(--primary-neon);
+    font-weight: 600;
+    min-width: 100px;
 }
 
 #upload-button:hover {
-    background-color: #0b7dda;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    transform: translateY(-2px);
 }
 
 #upload-status {
-    margin-top: 10px;
+    margin-top: 15px;
+    width: 100%;
+}
+
+/* Custom styling for flatpickr */
+.flatpickr-calendar {
+    background: var(--bg-darker) !important;
+    border: 1px solid var(--primary-neon) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+.flatpickr-day {
+    color: var(--text-primary) !important;
+    border-radius: 5px !important;
+}
+
+.flatpickr-day.selected {
+    background: var(--primary-neon) !important;
+    color: var(--bg-darker) !important;
+    border-color: var(--primary-neon) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
+}
+
+.flatpickr-day:hover {
+    background: rgba(0, 255, 255, 0.2) !important;
+}
+
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month,
+.flatpickr-monthDropdown-months,
+.flatpickr-weekdays,
+.flatpickr-weekday {
+    color: var(--primary-neon) !important;
+    background: transparent !important;
+    fill: var(--primary-neon) !important;
+}
+
+.flatpickr-prev-month svg,
+.flatpickr-next-month svg {
+    fill: var(--primary-neon) !important;
+}
+
+.flatpickr-time {
+    background: var(--bg-darker) !important;
+    border-top: 1px solid var(--glass-border) !important;
+}
+
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+    color: var(--text-primary) !important;
+}
+
+/* Animation for chart loading */
+@keyframes chartFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#chart-container {
+    animation: chartFadeIn 0.5s ease-out;
 }
 
 .idle-marker {
     vertical-align: middle;
+}
+/* Additional cyberpunk styles */
+.subtitle {
+    text-align: center;
+    color: var(--secondary-neon);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    font-family: 'Poppins', sans-serif;
+    opacity: 0.8;
+}
+
+.section-glow {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.1), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 10, 18, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.cyber-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid transparent;
+    border-top: 3px solid var(--primary-neon);
+    border-right: 3px solid var(--secondary-neon);
+    border-bottom: 3px solid var(--tertiary-neon);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.loading-text {
+    margin-top: 15px;
+    color: var(--primary-neon);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+.btn-text {
+    position: relative;
+    z-index: 2;
+}
+
+.app-footer {
+    margin-top: 30px;
+    padding: 15px 0;
+    text-align: center;
+    border-top: 1px solid var(--glass-border);
+}
+
+.footer-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.footer-text {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
