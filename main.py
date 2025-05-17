@@ -88,6 +88,9 @@ def get_app_display_name(app_name):
         'cn.trae.app': 'Trae',
         'com.exafunction.windsurf': 'Windsurf',
         'org.python.python': 'Python',
+        'com.microsoft.VSCode': 'VSCode',
+        'com.tencent.QQMusicMac': 'QQ音乐',
+        'com.apple.systempreferences': '系统设置',
     }
     
     # 如果在映射中找到则直接返回
