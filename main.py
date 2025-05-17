@@ -41,6 +41,19 @@ def get_screen_time_data():
     
     return df
 
+def get_app_display_name(app_name):
+    """将应用包名映射为中文显示名称"""
+    name_mapping = {
+        'com.apple.finder': 'Finder',
+        'com.tencent.xinWeChat': '微信',
+        'com.googlecode.iterm2': 'Iterm2',
+        'com.electron.lark.iron': '飞书会议', 
+        'com.jetbrains.goland': 'Goland',
+        'com.electron.lark': '飞书',
+        'com.google.Chrome': 'Chrome'
+    }
+    return name_mapping.get(app_name, app_name)
+
 def generate_gantt_chart(df):
     # 合并相邻时间段的函数
     def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
@@ -64,7 +77,7 @@ def generate_gantt_chart(df):
         for _, row in sorted_group.iloc[1:].iterrows():
             # 计算时间间隔（分钟）
             gap = (row['start_time'] - current['end_time']).total_seconds() / 60
-            if gap <= 3:  # 3 分钟间隔阈值
+            if gap <= 3 or (row['app_name'] == 'com.electron.lark.iron' and gap<=10):  # 3 分钟间隔阈值
                 # 合并时间段
                 current['end_time'] = max(current['end_time'], row['end_time'])
             else:
@@ -93,6 +106,9 @@ def generate_gantt_chart(df):
     df['y'] = df['app_name'].map(lambda x: app_order.get(x, -1))
     df = df[df['y'] != -1].copy()
     df = df.sort_values('y')  # 排序
+
+    # 添加显示名称映射（移动到循环前）
+    df['display_name'] = df['app_name'].apply(get_app_display_name)
 
     # 更新颜色分配逻辑
     unique_apps = [app for app in total_usage.index if app in app_order]
@@ -165,7 +181,9 @@ def generate_gantt_chart(df):
     for _, row in df.iterrows():
         # 在合并前计算总使用时长
         total_usage_before_merge = df[df['end_time'] > df['start_time']].groupby('app_name')['duration'].sum().sort_values(ascending=False)
-        bar = ax.barh(f'{row["app_name"]}\n{format_time(total_usage_before_merge[row["app_name"]])}', row['duration'], 
+        
+        # 修改barh调用处（此时display_name已存在）
+        bar = ax.barh(f'{row["display_name"]}\n{format_time(total_usage_before_merge[row["app_name"]])}', row['duration'], 
                      left=row['start_minutes'], 
                      height=0.5,
                      color=app_colors[row['app_name']])  # 使用固定颜色
