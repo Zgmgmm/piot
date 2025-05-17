@@ -19,7 +19,13 @@ yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 TARGET_DATE = yesterday
 DB_PATH = '/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db'
 
-def get_screen_time_data():
+def fetch_raw_screen_time_data():
+    """
+    获取原始屏幕使用时间数据
+    
+    Returns:
+        包含原始屏幕使用时间数据的DataFrame
+    """
     # 连接数据库
     conn = sqlite3.connect(DB_PATH)
     
@@ -41,21 +47,34 @@ def get_screen_time_data():
     df = pd.read_sql_query(query, conn)
     conn.close()
     
+    return df
+
+def process_screen_time_data(df):
+    """
+    处理屏幕使用时间数据
+    
+    Args:
+        df: 原始屏幕使用时间数据DataFrame
+    
+    Returns:
+        处理后的屏幕使用时间数据DataFrame
+    """
+        
     # 转换时间戳，macOS 时间戳从 2001-01-01 开始
     df['start_time'] = pd.to_datetime(df['start_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
     df['end_time'] = pd.to_datetime(df['end_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
-
-    df = df[df['end_time'] > df['start_time']].copy()
-    df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
-    df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
-
+    
     # 过滤结束时间早于开始时间的记录
     df = df[df['end_time'] > df['start_time']].copy()
+    
+    # 计算相对分钟和使用时长
+    df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
+    df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
     
     # 按应用名称分组，合并相邻时间段
     df = df.groupby('app_name', group_keys=False).apply(merge_intervals).reset_index(drop=True)
     
-    # 计算相对分钟和使用时长
+    # 重新计算相对分钟和使用时长（合并后需要更新）
     df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
     df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
 
@@ -71,6 +90,16 @@ def get_screen_time_data():
     df = df.sort_values('y')  # 排序
 
     return df
+
+def get_screen_time_data():
+    """
+    获取并处理屏幕使用时间数据
+    
+    Returns:
+        处理后的屏幕使用时间数据DataFrame
+    """
+    raw_data = fetch_raw_screen_time_data()
+    return process_screen_time_data(raw_data)
 
 def get_app_display_name(app_name):
     """将应用包名映射为中文显示名称
