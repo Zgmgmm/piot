@@ -5,16 +5,30 @@
     <title>屏幕使用时间统计</title>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- SQL.js 库用于在浏览器中解析SQLite文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>屏幕使用时间统计</h1>
+        
+        <div id="file-upload-section" class="file-upload-section">
+            <h3>上传数据库文件</h3>
+            <p>选择您的 knowledgeC.db 文件并点击“确认”按钮</p>
+            <div class="upload-controls">
+                <input type="file" id="db-file" name="db-file" accept=".db">
+                <button type="button" id="upload-button">确认</button>
+            </div>
+        </div>
+        
         <div class="date-picker">
             <label for="date">选择日期：</label>
             <button id="prev-date" onclick="navigateDate(-1)">前一天</button>
             <input type="date" id="date" value="{{ yesterday }}">
             <button id="next-date" onclick="navigateDate(1)">后一天</button>
-            <button onclick="fetchData()">查询</button>
+            <button id="today-button" onclick="navigateToday()">今天</button>
+            <button id="query-button" onclick="queryDatabase()">查询</button>
+            <div id="upload-status"></div>
         </div>
         <div id="chart-container"></div>
     </div>

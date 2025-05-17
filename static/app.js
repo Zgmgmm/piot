@@ -1,6 +1,21 @@
-// 获取元素
-const dateInput = document.getElementById('date');
-const chartContainer = document.getElementById('chart-container');
+// 全局变量声明
+let dateInput;
+let chartContainer;
+let fileUploadSection;
+let dbFileInput;
+let uploadButton;
+let uploadStatus;
+
+// 数据库状态
+let uploadedFile = null;
+let loadedDb = null; // 已加载的数据库对象
+
+// SQL.js 初始化
+let SQL;
+let sqlReady = false;
+
+// macOS 时间戳偏移量
+const MACOS_EPOCH_OFFSET = 978307200;
 
 // 日期导航函数
 function navigateDate(days) {
@@ -10,27 +25,309 @@ function navigateDate(days) {
     const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
     const dd = String(currentDate.getDate()).padStart(2, '0');
     dateInput.value = `${yyyy}-${mm}-${dd}`;
-    fetchData();
+    
+    // 如果数据库已加载，直接查询新日期
+    if (loadedDb) {
+        queryDatabase();
+    } else {
+        uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“确认”按钮</p>';
+    }
+}
+
+// 导航到今天的函数
+function navigateToday() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    
+    // 如果数据库已加载，直接查询今天的数据
+    if (loadedDb) {
+        queryDatabase();
+    } else {
+        uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“确认”按钮</p>';
+    }
 }
 
 // 初始化日期为昨天
 window.onload = function () {
+    // 初始化 DOM 元素
+    dateInput = document.getElementById('date');
+    chartContainer = document.getElementById('chart-container');
+    fileUploadSection = document.getElementById('file-upload-section');
+    dbFileInput = document.getElementById('db-file');
+    uploadButton = document.getElementById('upload-button');
+    uploadStatus = document.getElementById('upload-status');
+    
+    // 设置日期
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yyyy = yesterday.getFullYear();
     const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
     const dd = String(yesterday.getDate()).padStart(2, '0');
     dateInput.value = `${yyyy}-${mm}-${dd}`;
-    fetchData();
+    
+    // 初始化 SQL.js
+    initializeSqlJs();
+    
+    // 添加文件上传事件监听
+    dbFileInput.addEventListener('change', handleFileSelect);
+    uploadButton.addEventListener('click', function() {
+        if (uploadedFile) {
+            processUploadedFile();
+        } else {
+            uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
+        }
+    });
+    
+    // 显示初始提示
+    uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“处理文件”按钮</p>';
+    
+    // 显示空图表
+    renderChart([]);
 };
 
-// 获取数据并渲染
+// 初始化 SQL.js
+function initializeSqlJs() {
+    console.log('Initializing SQL.js...');
+    
+    // 检查全局变量
+    if (typeof window.initSqlJs === 'undefined') {
+        console.error('SQL.js initializer not found');
+        if (uploadStatus) {
+            uploadStatus.innerHTML = '<p style="color: red;">SQL.js 初始化失败，请刷新页面重试</p>';
+        }
+        return;
+    }
+    
+    // 使用正确的 CDN 路径
+    window.initSqlJs({
+        locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+    }).then(function(sql) {
+        SQL = sql;
+        sqlReady = true;
+        console.log('SQL.js initialized successfully');
+        
+        // 如果已有文件，自动处理
+        if (uploadedFile && uploadStatus) {
+            processUploadedFile();
+        }
+    }).catch(function(err) {
+        console.error('Error initializing SQL.js', err);
+        if (uploadStatus) {
+            uploadStatus.innerHTML = '<p style="color: red;">SQL.js 初始化失败，请刷新页面重试</p>';
+        }
+    });
+}
+
+// 处理文件选择
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
+        return;
+    }
+    
+    // 检查文件类型
+    if (!file.name.endsWith('.db')) {
+        uploadStatus.innerHTML = '<p style="color: red;">请选择 .db 格式的 SQLite 数据库文件</p>';
+        return;
+    }
+    
+    uploadedFile = file;
+    uploadStatus.innerHTML = `<p>文件 "${file.name}" 已选择，点击上传按钮开始处理</p>`;
+}
+
+// 处理上传的文件
+function processUploadedFile() {
+    if (!sqlReady) {
+        uploadStatus.innerHTML = '<p style="color: red;">SQL.js 还未准备好，请稍后再试</p>';
+        return;
+    }
+    
+    if (!uploadedFile) {
+        uploadStatus.innerHTML = '<p style="color: red;">请选择一个文件</p>';
+        return;
+    }
+    
+    // 如果数据库已经加载，直接使用
+    if (loadedDb) {
+        queryDatabase();
+        return;
+    }
+    
+    uploadStatus.innerHTML = '<p>正在加载数据库文件...</p>';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const uInt8Array = new Uint8Array(e.target.result);
+            loadedDb = new SQL.Database(uInt8Array); // 将数据库存储在全局变量中
+            uploadStatus.innerHTML = '<p style="color: green;">数据库文件加载成功</p>';
+            
+            // 数据库加载成功后查询当前日期的数据
+            queryDatabase();
+        } catch (error) {
+            console.error('处理数据库文件失败:', error);
+            uploadStatus.innerHTML = `<p style="color: red;">处理数据库文件失败: ${error.message}</p>`;
+        }
+    };
+    reader.onerror = function() {
+        uploadStatus.innerHTML = '<p style="color: red;">读取文件失败</p>';
+    };
+    reader.readAsArrayBuffer(uploadedFile);
+}
+
+// 查询数据库获取当前日期的数据
+function queryDatabase() {
+    if (!loadedDb) {
+        uploadStatus.innerHTML = '<p style="color: red;">数据库还未加载，请先点击“确认”按钮</p>';
+        return;
+    }
+    
+    try {
+        const date = dateInput.value;
+        uploadStatus.innerHTML = `<p>正在查询 ${date} 的数据...</p>`;
+        
+        // 构建查询
+        const query = `
+        SELECT 
+            ZOBJECT.ZVALUESTRING as app_name,
+            ZOBJECT.ZSTARTDATE as start_time,
+            ZOBJECT.ZENDDATE as end_time
+        FROM 
+            ZOBJECT
+        WHERE 
+            ZSTREAMNAME = '/app/usage' 
+            AND date(ZOBJECT.ZSTARTDATE + ${MACOS_EPOCH_OFFSET}, 'unixepoch', 'localtime') = '${date}'
+            AND ZOBJECT.ZVALUESTRING IS NOT NULL
+        ORDER BY 
+            ZOBJECT.ZSTARTDATE
+        `;
+        
+        // 执行查询
+        const results = loadedDb.exec(query);
+        
+        if (results.length === 0 || results[0].values.length === 0) {
+            uploadStatus.innerHTML = `<p>没有找到 ${date} 的数据</p>`;
+            renderChart([]);
+            return;
+        }
+        
+        // 处理查询结果
+        const data = processQueryResults(results[0]);
+        renderChart(data);
+        uploadStatus.innerHTML = `<p style="color: green;">数据加载成功，显示 ${data.length} 条记录</p>`;
+    } catch (error) {
+        console.error('查询数据库失败:', error);
+        uploadStatus.innerHTML = `<p style="color: red;">查询数据库失败: ${error.message}</p>`;
+    }
+}
+
+// 处理查询结果
+function processQueryResults(results) {
+    const columns = results.columns; // ['app_name', 'start_time', 'end_time']
+    const values = results.values;
+    
+    // 处理数据
+    const processedData = [];
+    const appUsage = {};
+    
+    // 首先将数据转换为对象数组
+    const rawData = values.map(row => {
+        const item = {};
+        columns.forEach((col, index) => {
+            item[col] = row[index];
+        });
+        return item;
+    });
+    
+    // 处理时间戳和应用名称
+    rawData.forEach(item => {
+        // 转换时间戳，macOS 时间戳从 2001-01-01 开始
+        const startTime = new Date((item.start_time + MACOS_EPOCH_OFFSET) * 1000);
+        const endTime = new Date((item.end_time + MACOS_EPOCH_OFFSET) * 1000);
+        
+        // 过滤结束时间早于开始时间的记录
+        if (endTime <= startTime) {
+            return;
+        }
+        
+        // 计算使用时长（分钟）
+        const durationMinutes = (endTime - startTime) / (1000 * 60);
+        
+        // 累计应用使用时长
+        if (!appUsage[item.app_name]) {
+            appUsage[item.app_name] = 0;
+        }
+        appUsage[item.app_name] += durationMinutes;
+        
+        // 添加到处理后的数据中
+        processedData.push({
+            app_name: getAppDisplayName(item.app_name),
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString()
+        });
+    });
+    
+    // 过滤总时长≥ 2 分钟的应用
+    const filteredData = processedData.filter(item => {
+        const appName = item.app_name;
+        const originalAppName = rawData.find(raw => getAppDisplayName(raw.app_name) === appName)?.app_name;
+        return originalAppName && appUsage[originalAppName] >= 2;
+    });
+    
+    return filteredData;
+}
+
+// 将应用包名映射为中文显示名称
+function getAppDisplayName(appName) {
+    const nameMapping = {
+        'com.apple.finder': 'Finder',
+        'com.tencent.xinWeChat': '微信',
+        'com.googlecode.iterm2': 'Iterm2',
+        'com.electron.lark.iron': '飞书会议', 
+        'com.jetbrains.goland': 'Goland',
+        'com.electron.lark': '飞书',
+        'com.google.Chrome': 'Chrome',
+        'cn.trae.app': 'Trae',
+        'com.exafunction.windsurf': 'Windsurf',
+        'org.python.python': 'Python',
+        'com.microsoft.VSCode': 'VSCode',
+        'com.tencent.QQMusicMac': 'QQ音乐',
+        'com.apple.systempreferences': '系统设置',
+    };
+    
+    // 如果在映射中找到则直接返回
+    if (appName in nameMapping) {
+        return nameMapping[appName];
+    }
+    
+    // 其他情况返回原始名称
+    return appName;
+}
+
+// 处理数据 - 检查数据库状态并执行相应操作
 function fetchData() {
-    const date = dateInput.value;
-    fetch(`/api/data?date=${date}`)
-        .then(response => response.json())
-        .then(data => renderChart(data))
-        .catch(error => console.error('获取数据失败:', error));
+    // 如果数据库已经加载，直接查询当前日期
+    if (loadedDb) {
+        queryDatabase();
+        return;
+    }
+    
+    // 如果有上传的文件但数据库还没加载，则处理文件
+    if (uploadedFile) {
+        if (sqlReady) {
+            processUploadedFile();
+        } else {
+            uploadStatus.innerHTML = '<p style="color: orange;">SQL.js 正在加载中，请稍后...</p>';
+        }
+    } else {
+        // 如果没有上传文件，提示用户选择文件
+        uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“确认”按钮</p>';
+        renderChart([]); // 显示空图表
+    }
 }
 
 // 渲染甘特图
@@ -293,7 +590,7 @@ function renderChart(data) {
     
     // 将统计信息添加到图表中
     option.title = {
-        text: `屏幕使用统计 (总时长: ${statsInfo.totalUsageFormatted})`,
+        text: `屏幕使用总时长: ${statsInfo.totalUsageFormatted}`,
         left: 'center',
         top: 0,
         textStyle: {
