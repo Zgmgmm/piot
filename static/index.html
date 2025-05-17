@@ -32,14 +32,15 @@
         
         <div id="file-upload-section" class="file-upload-section">
             <div class="section-glow"></div>
-            <h3>上传数据库文件</h3>
-            <p>选择你的 ~/Library/Application Support/Knowledge/knowledgeC.db 文件并点击"确认"按钮</p>
-            <div class="upload-controls">
-                <input type="file" id="db-file" name="db-file" accept=".db">
-                <button type="button" id="upload-button">确认</button>
+            <div class="upload-content">
+                <div class="upload-controls">
+                    <input type="file" id="db-file" name="db-file" accept=".db" placeholder="选择knowledgeC.db文件">
+                    <button type="button" id="upload-button">确认</button>
+                </div>
+                <p class="upload-hint">选择你的 ~/Library/Application Support/Knowledge/knowledgeC.db 文件并点击"确认"按钮</p>
             </div>
         </div>
-        
+
         <div class="date-picker">
             <div class="date-controls">
                 <button id="prev-date" class="date-nav-btn" onclick="navigateDate(-1)">
@@ -58,6 +59,10 @@
                 <button id="query-button" class="action-btn primary-btn" onclick="queryDatabase()">
                     <span class="btn-text">查询</span>
                 </button>
+                <div id="data-range-container" class="data-range-display" style="display: none;">
+                    <span class="range-label">有数据日期:</span>
+                    <span class="date-range" id="date-range-text"></span>
+                </div>
             </div>
             <div id="upload-status" class="status-message"></div>
         </div>

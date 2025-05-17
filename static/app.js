@@ -4,6 +4,11 @@ let chartContainer;
 let fileUploadSection;
 let dbFileInput;
 
+// 缓存数据库变量
+let dbCache;
+const DB_CACHE_NAME = 'cachedDbFile';
+const DB_CACHE_INFO_KEY = 'dbCacheInfo';
+
 // 获取中文星期几
 function getChineseDayOfWeek(date) {
     const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -33,6 +38,152 @@ let sqlReady = false;
 
 // macOS 时间戳偏移量
 const MACOS_EPOCH_OFFSET = 978307200;
+
+// IndexedDB 缓存函数
+// 初始化 IndexedDB
+function initIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('FileCache', 1);
+        
+        request.onerror = event => {
+            console.error('IndexedDB 打开失败:', event);
+            reject('无法打开数据库');
+        };
+        
+        request.onsuccess = event => {
+            console.log('IndexedDB 打开成功');
+            dbCache = event.target.result;
+            resolve(dbCache);
+        };
+        
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('files')) {
+                const store = db.createObjectStore('files', { keyPath: 'id' });
+                store.createIndex('name', 'name', { unique: false });
+                console.log('创建了 files 存储对象');
+            }
+            if (!db.objectStoreNames.contains('info')) {
+                db.createObjectStore('info', { keyPath: 'id' });
+                console.log('创建了 info 存储对象');
+            }
+        };
+    });
+}
+
+// 保存文件到 IndexedDB
+function saveFileToCache(file) {
+    return new Promise((resolve, reject) => {
+        if (!dbCache) {
+            reject('数据库未初始化');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const transaction = dbCache.transaction(['files', 'info'], 'readwrite');
+                
+                // 保存文件内容
+                const filesStore = transaction.objectStore('files');
+                const fileData = {
+                    id: DB_CACHE_NAME,
+                    data: e.target.result,
+                    name: file.name,
+                    type: file.type,
+                    lastModified: file.lastModified
+                };
+                filesStore.put(fileData);
+                
+                // 保存文件信息
+                const infoStore = transaction.objectStore('info');
+                const infoData = {
+                    id: DB_CACHE_INFO_KEY,
+                    fileName: file.name,
+                    timestamp: new Date().getTime()
+                };
+                infoStore.put(infoData);
+                
+                transaction.oncomplete = () => {
+                    console.log('文件已缓存:', file.name);
+                    resolve(true);
+                };
+                
+                transaction.onerror = event => {
+                    console.error('缓存文件失败:', event);
+                    reject('缓存文件失败: ' + event.target.error);
+                };
+            } catch (error) {
+                console.error('处理文件缓存时出错:', error);
+                reject(error.message);
+            }
+        };
+        
+        reader.onerror = () => reject('读取文件失败');
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// 从 IndexedDB 加载文件
+function loadFileFromCache() {
+    return new Promise((resolve, reject) => {
+        if (!dbCache) {
+            reject('数据库未初始化');
+            return;
+        }
+        
+        const transaction = dbCache.transaction(['files', 'info'], 'readonly');
+        const filesStore = transaction.objectStore('files');
+        const infoStore = transaction.objectStore('info');
+        
+        // 先获取文件信息
+        const infoRequest = infoStore.get(DB_CACHE_INFO_KEY);
+        
+        infoRequest.onsuccess = event => {
+            const info = event.target.result;
+            if (!info) {
+                resolve(null);
+                return;
+            }
+            
+            // 然后获取文件内容
+            const fileRequest = filesStore.get(DB_CACHE_NAME);
+            
+            fileRequest.onsuccess = event => {
+                const fileData = event.target.result;
+                if (!fileData) {
+                    resolve(null);
+                    return;
+                }
+                
+                // 创建 File 对象
+                const file = new File(
+                    [fileData.data], 
+                    fileData.name, 
+                    {
+                        type: fileData.type,
+                        lastModified: fileData.lastModified
+                    }
+                );
+                
+                resolve({
+                    file,
+                    info
+                });
+            };
+            
+            fileRequest.onerror = event => {
+                console.error('获取缓存文件失败:', event);
+                reject('获取缓存文件失败: ' + event.target.error);
+            };
+        };
+        
+        infoRequest.onerror = event => {
+            console.error('获取缓存信息失败:', event);
+            reject('获取缓存信息失败: ' + event.target.error);
+        };
+    });
+}
 
 // 日期导航函数
 function navigateDate(days) {
@@ -301,9 +452,40 @@ window.onload = function () {
 
     // 初始化 SQL.js
     initializeSqlJs();
-
-    // 显示初始提示
-    uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击“处理文件”按钮</p>';
+    
+    // 初始化 IndexedDB 并尝试加载缓存的数据库文件
+    initIndexedDB()
+        .then(() => {
+            // 检查是否有缓存的文件
+            return loadFileFromCache();
+        })
+        .then(cachedData => {
+            if (cachedData) {
+                console.log('从缓存找到文件:', cachedData.info.fileName);
+                uploadedFile = cachedData.file;
+                uploadStatus.innerHTML = `<p>从缓存加载了文件 "${cachedData.info.fileName}"</p>`;
+                
+                // 如果 SQL.js 已经初始化完成，则处理文件
+                if (sqlReady) {
+                    processUploadedFile();
+                } else {
+                    // 等待 SQL.js 初始化完成
+                    const checkSqlInterval = setInterval(() => {
+                        if (sqlReady) {
+                            clearInterval(checkSqlInterval);
+                            processUploadedFile();
+                        }
+                    }, 100);
+                }
+            } else {
+                // 没有缓存文件
+                uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击"处理文件"按钮</p>';
+            }
+        })
+        .catch(error => {
+            console.error('加载缓存文件失败:', error);
+            uploadStatus.innerHTML = '<p style="color: blue;">请选择数据库文件并点击"处理文件"按钮</p>';
+        });
 
     // 显示空图表
     renderChart([]);
@@ -358,6 +540,15 @@ function handleFileSelect(event) {
 
     uploadedFile = file;
     uploadStatus.innerHTML = `<p>文件 "${file.name}" 已选择，点击上传按钮开始处理</p>`;
+    
+    // 将文件保存到缓存
+    saveFileToCache(file)
+        .then(() => {
+            console.log('文件已成功缓存');
+        })
+        .catch(error => {
+            console.error('缓存文件失败:', error);
+        });
 }
 
 // 处理上传的文件
@@ -427,12 +618,26 @@ function updateAvailableDates() {
         if (results.length === 0 || results[0].values.length === 0) {
             console.log('没有找到任何日期的数据');
             uploadStatus.innerHTML = '<p style="color: orange;">数据库中没有找到任何日期的数据</p>';
+            document.getElementById('data-range-container').style.display = 'none';
             return;
         }
 
         // 获取所有有数据的日期
         const availableDates = results[0].values.map(row => row[0]);
         console.log('可用日期:', availableDates);
+        
+        // 显示最早和最晚的日期范围
+        if (availableDates.length > 0) {
+            const earliestDate = availableDates[0];
+            const latestDate = availableDates[availableDates.length - 1];
+            const dateRangeElement = document.getElementById('date-range-text');
+            const dataRangeContainer = document.getElementById('data-range-container');
+            
+            if (dateRangeElement && dataRangeContainer) {
+                dateRangeElement.textContent = `${earliestDate} 至 ${latestDate}`;
+                dataRangeContainer.style.display = 'flex';
+            }
+        }
 
         // 创建一个函数，用于禁用没有数据的日期
         const disableUnavailableDates = (date) => {
@@ -458,17 +663,18 @@ function updateAvailableDates() {
             if (!availableDates.includes(formattedCurrentDate) && availableDates.length > 0) {
                 // 选择第一个可用日期
                 flatpickrInstance.setDate(availableDates[0]);
-                uploadStatus.innerHTML = `<p style="color: blue;">当前日期无数据，已自动选择有数据的日期: ${availableDates[0]}</p>`;
+                uploadStatus.innerHTML = `<p>当前日期无数据，已自动选择有数据的日期: ${availableDates[0]}</p>`;
             }
         }
 
         // 更新状态消息，显示可用日期数量
         if (availableDates.length > 0) {
-            uploadStatus.innerHTML = `<p style="color: green;">数据库中找到 ${availableDates.length} 个日期的数据</p>`;
+            uploadStatus.innerHTML = `<p>数据库中找到 ${availableDates.length} 个日期的数据</p>`;
         }
     } catch (error) {
         console.error('更新可用日期失败:', error);
         uploadStatus.innerHTML = `<p style="color: red;">更新可用日期失败: ${error.message}</p>`;
+        document.getElementById('data-range-container').style.display = 'none';
     }
 }
 
@@ -519,7 +725,7 @@ function queryDatabase() {
             // 处理查询结果
             const data = processQueryResults(results[0]);
             renderChart(data);
-            uploadStatus.innerHTML = `<p style="color: green;">数据加载成功，显示 ${data.length} 条记录</p>`;
+            uploadStatus.innerHTML = `<p>数据加载成功，显示 ${data.length} 条记录</p>`;
         } catch (error) {
             console.error('查询数据库失败:', error);
             uploadStatus.innerHTML = `<p style="color: red;">查询数据库失败: ${error.message}</p>`;
