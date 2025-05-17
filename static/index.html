@@ -11,7 +11,9 @@
         <h1>屏幕使用时间统计</h1>
         <div class="date-picker">
             <label for="date">选择日期：</label>
+            <button id="prev-date" onclick="navigateDate(-1)">前一天</button>
             <input type="date" id="date" value="{{ yesterday }}">
+            <button id="next-date" onclick="navigateDate(1)">后一天</button>
             <button onclick="fetchData()">查询</button>
         </div>
         <div id="chart-container"></div>

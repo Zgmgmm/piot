@@ -59,6 +59,17 @@ def get_screen_time_data():
     df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
     df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
 
+    # 过滤总时长≥2分钟的应用
+    total_usage = df.groupby('app_name')['duration'].sum()
+    total_usage = total_usage[total_usage >= 2].sort_values(ascending=False)
+    df = df[df['app_name'].isin(total_usage.index)]  # 过滤数据集
+
+    # 按总使用时长排序
+    app_order = {app: i for i, app in enumerate(total_usage.index)}
+    df['y'] = df['app_name'].map(lambda x: app_order.get(x, -1))
+    df = df[df['y'] != -1].copy()
+    df = df.sort_values('y')  # 排序
+
     return df
 
 def get_app_display_name(app_name):
@@ -73,7 +84,10 @@ def get_app_display_name(app_name):
         'com.electron.lark.iron': '飞书会议', 
         'com.jetbrains.goland': 'Goland',
         'com.electron.lark': '飞书',
-        'com.google.Chrome': 'Chrome'
+        'com.google.Chrome': 'Chrome',
+        'cn.trae.app': 'Trae',
+        'com.exafunction.windsurf': 'Windsurf',
+        'org.python.python': 'Python',
     }
     
     # 如果在映射中找到则直接返回
@@ -81,8 +95,8 @@ def get_app_display_name(app_name):
         return name_mapping[app_name]
     
     # 如果是a.b.c格式的包名，返回c部分
-    if '.' in app_name:
-        return app_name.split('.')[-1]
+    # if '.' in app_name:
+    #     return app_name.split('.')[-1]
     
     # 其他情况返回原始名称
     return app_name
@@ -119,17 +133,6 @@ def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(merged)
 
 def generate_gantt_chart(df):
-    # 按总使用时长排序并过滤总时长≥2分钟的应用
-    total_usage = df.groupby('app_name')['duration'].sum()
-    total_usage = total_usage[total_usage >= 2].sort_values(ascending=False)
-    
-    # 重建应用顺序映射
-    app_order = {app: i for i, app in enumerate(total_usage.index)}
-    df = df[df['app_name'].isin(total_usage.index)]  # 过滤数据集
-    df['y'] = df['app_name'].map(lambda x: app_order.get(x, -1))
-    df = df[df['y'] != -1].copy()
-    df = df.sort_values('y')  # 排序
-
     # 添加显示名称映射（移动到循环前）
     df['display_name'] = df['app_name'].apply(get_app_display_name)
 
@@ -188,7 +191,7 @@ def generate_gantt_chart(df):
         ax.axvspan(gap_start, gap_end, color='lightgray', alpha=0.3, zorder=0)
 
     # 更新颜色分配逻辑
-    unique_apps = [app for app in total_usage.index if app in app_order]
+    unique_apps = df['app_name'].unique().tolist()
     # 使用过滤后的应用列表分配颜色
     colors = plt.cm.tab20(np.linspace(0, 1, len(unique_apps)))
     app_colors = {app: colors[i] for i, app in enumerate(unique_apps)}

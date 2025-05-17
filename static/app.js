@@ -2,6 +2,17 @@
 const dateInput = document.getElementById('date');
 const chartContainer = document.getElementById('chart-container');
 
+// 日期导航函数
+function navigateDate(days) {
+    const currentDate = new Date(dateInput.value);
+    currentDate.setDate(currentDate.getDate() + days);
+    const yyyy = currentDate.getFullYear();
+    const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(currentDate.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    fetchData();
+}
+
 // 初始化日期为昨天
 window.onload = function () {
     const yesterday = new Date();
@@ -137,10 +148,6 @@ function renderChart(data) {
 
     // 构建图表配置
     const option = {
-        title: {
-            text: `${dateStr} 应用使用情况（甘特图）`,
-            left: 'center'
-        },
         tooltip: {
             formatter: function(params) {
                 return `${params.name}<br/>` +
