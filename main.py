@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 
 import argparse
+from flask import Flask, request, jsonify
 MACOS_EPOCH_OFFSET = 978307200
 
 yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -38,7 +39,11 @@ def get_screen_time_data():
     # 转换时间戳，macOS 时间戳从 2001-01-01 开始
     df['start_time'] = pd.to_datetime(df['start_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
     df['end_time'] = pd.to_datetime(df['end_time'] + MACOS_EPOCH_OFFSET, unit='s').dt.tz_localize('UTC').dt.tz_convert(timezone('Asia/Shanghai'))
-    
+
+    df = df[df['end_time'] > df['start_time']].copy()
+    df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
+    df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
+
     return df
 
 def get_app_display_name(app_name):
@@ -54,38 +59,38 @@ def get_app_display_name(app_name):
     }
     return name_mapping.get(app_name, app_name)
 
-def generate_gantt_chart(df):
-    # 合并相邻时间段的函数
-    def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
-        """
-        合并相邻时间段
-        
-        Args:
-            group: 按应用分组的时间段数据
-            threshold: 合并间隔阈值（分钟）
-        
-        Returns:
-            合并后的时间段DataFrame
-        """
-        if len(group) == 0:
-            return group
-        # 按开始时间排序
-        sorted_group = group.sort_values('start_time')
-        merged = []
-        current = sorted_group.iloc[0]
-        
-        for _, row in sorted_group.iloc[1:].iterrows():
-            # 计算时间间隔（分钟）
-            gap = (row['start_time'] - current['end_time']).total_seconds() / 60
-            if gap <= 3 or (row['app_name'] == 'com.electron.lark.iron' and gap<=10):  # 3 分钟间隔阈值
-                # 合并时间段
-                current['end_time'] = max(current['end_time'], row['end_time'])
-            else:
-                merged.append(current)
-                current = row
-        merged.append(current)
-        return pd.DataFrame(merged)
+# 合并相邻时间段的函数
+def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
+    """
+    合并相邻时间段
+    
+    Args:
+        group: 按应用分组的时间段数据
+        threshold: 合并间隔阈值（分钟）
+    
+    Returns:
+        合并后的时间段DataFrame
+    """
+    if len(group) == 0:
+        return group
+    # 按开始时间排序
+    sorted_group = group.sort_values('start_time')
+    merged = []
+    current = sorted_group.iloc[0]
+    
+    for _, row in sorted_group.iloc[1:].iterrows():
+        # 计算时间间隔（分钟）
+        gap = (row['start_time'] - current['end_time']).total_seconds() / 60
+        if gap <= 3 or (row['app_name'] == 'com.electron.lark.iron' and gap<=10):  # 3 分钟间隔阈值
+            # 合并时间段
+            current['end_time'] = max(current['end_time'], row['end_time'])
+        else:
+            merged.append(current)
+            current = row
+    merged.append(current)
+    return pd.DataFrame(merged)
 
+def generate_gantt_chart(df):
     # 过滤结束时间早于开始时间的记录
     df = df[df['end_time'] > df['start_time']].copy()
     
@@ -109,9 +114,6 @@ def generate_gantt_chart(df):
 
     # 添加显示名称映射（移动到循环前）
     df['display_name'] = df['app_name'].apply(get_app_display_name)
-
-    # 更新颜色分配逻辑
-    unique_apps = [app for app in total_usage.index if app in app_order]
 
     if df.empty:
         print("合并后的数据为空，无法绘制甘特图。")
@@ -167,6 +169,8 @@ def generate_gantt_chart(df):
     for gap_start, gap_end in gaps:
         ax.axvspan(gap_start, gap_end, color='lightgray', alpha=0.3, zorder=0)
 
+    # 更新颜色分配逻辑
+    unique_apps = [app for app in total_usage.index if app in app_order]
     # 使用过滤后的应用列表分配颜色
     colors = plt.cm.tab20(np.linspace(0, 1, len(unique_apps)))
     app_colors = {app: colors[i] for i, app in enumerate(unique_apps)}
@@ -222,22 +226,44 @@ def generate_gantt_chart(df):
     plt.savefig("screen_time_gantt.png")
     plt.show()
 
+
+app = Flask(__name__, static_folder='static')
+
+@app.route('/api/data')
+def get_data():
+    target_date = request.args.get('date', yesterday)
+    global TARGET_DATE
+    TARGET_DATE = target_date
+    df = get_screen_time_data()
+    # 处理数据并添加显示名称
+    df['display_name'] = df['app_name'].apply(get_app_display_name)
+    # 转换为JSON可序列化格式
+    data = []
+    for _, row in df.iterrows():
+        data.append({
+            'app_name': row['display_name'],
+            'start_time': row['start_time'].isoformat(),
+            'end_time': row['end_time'].isoformat(),
+        })
+    return jsonify(data)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='查询屏幕使用时间数据的日期和数据库路径')
+    parser.add_argument('--web', action='store_true', help='启动Web服务')
     parser.add_argument('target_date', type=str, nargs='?', default=yesterday, help='查询日期，格式：YYYY-MM-DD，默认为昨天。')
     parser.add_argument('--db_path', type=str, default='/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db', help='数据库路径，默认为系统默认路径。')
     args = parser.parse_args()
     TARGET_DATE = args.target_date
     DB_PATH = args.db_path
+    web = args.web
+    if web:
+        app.run(host='0.0.0.0', port=5001)
+        exit()
 
     df = get_screen_time_data()
     if df.empty:
         print("未查询到数据，请确认日期或权限设置。")
     else:
-        df = df[df['end_time'] > df['start_time']].copy()
-        df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
-        df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
-
         app_usage = df.groupby('app_name')['duration'].sum().reset_index()
         app_usage.columns = ['应用名称', '使用时长（分钟）']
         print(app_usage)
