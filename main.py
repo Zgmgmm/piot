@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams['font.sans-serif'] = ['Songti SC']
@@ -13,6 +14,10 @@ from flask import Flask, request, jsonify
 MACOS_EPOCH_OFFSET = 978307200
 
 yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+# 初始化全局变量
+TARGET_DATE = yesterday
+DB_PATH = '/Users/bytedance/Library/Application Support/Knowledge/knowledgeC.db'
 
 def get_screen_time_data():
     # 连接数据库
@@ -44,10 +49,23 @@ def get_screen_time_data():
     df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
     df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
 
+    # 过滤结束时间早于开始时间的记录
+    df = df[df['end_time'] > df['start_time']].copy()
+    
+    # 按应用名称分组，合并相邻时间段
+    df = df.groupby('app_name', group_keys=False).apply(merge_intervals).reset_index(drop=True)
+    
+    # 计算相对分钟和使用时长
+    df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
+    df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
+
     return df
 
 def get_app_display_name(app_name):
-    """将应用包名映射为中文显示名称"""
+    """将应用包名映射为中文显示名称
+    
+    如果在映射中找不到，对于a.b.c格式的包名，返回c部分
+    """
     name_mapping = {
         'com.apple.finder': 'Finder',
         'com.tencent.xinWeChat': '微信',
@@ -57,7 +75,17 @@ def get_app_display_name(app_name):
         'com.electron.lark': '飞书',
         'com.google.Chrome': 'Chrome'
     }
-    return name_mapping.get(app_name, app_name)
+    
+    # 如果在映射中找到则直接返回
+    if app_name in name_mapping:
+        return name_mapping[app_name]
+    
+    # 如果是a.b.c格式的包名，返回c部分
+    if '.' in app_name:
+        return app_name.split('.')[-1]
+    
+    # 其他情况返回原始名称
+    return app_name
 
 # 合并相邻时间段的函数
 def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
@@ -91,16 +119,6 @@ def merge_intervals(group: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(merged)
 
 def generate_gantt_chart(df):
-    # 过滤结束时间早于开始时间的记录
-    df = df[df['end_time'] > df['start_time']].copy()
-    
-    # 按应用名称分组，合并相邻时间段
-    df = df.groupby('app_name', group_keys=False).apply(merge_intervals).reset_index(drop=True)
-    
-    # 计算相对分钟和使用时长
-    df['start_minutes'] = df['start_time'].dt.hour * 60 + df['start_time'].dt.minute + df['start_time'].dt.second / 60
-    df['duration'] = (df['end_time'] - df['start_time']).dt.total_seconds() / 60
-
     # 按总使用时长排序并过滤总时长≥2分钟的应用
     total_usage = df.groupby('app_name')['duration'].sum()
     total_usage = total_usage[total_usage >= 2].sort_values(ascending=False)

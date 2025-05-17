@@ -186,7 +186,20 @@ function renderChart(data) {
                     const timeStr = hours > 0 ? 
                         `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` : 
                         `${minutes}m`;
-                    return `${value} (${timeStr})`;
+                    // 使用HTML标签加粗应用名称
+                    return `{bold|${value}} {time|(${timeStr})}`;
+                },
+                rich: {
+                    bold: {
+                        fontWeight: 'bold',
+                        fontSize: 14,
+                        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif'
+                    },
+                    time: {
+                        fontSize: 12,
+                        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
+                        color: '#666'
+                    }
                 }
             },
             inverse: true
@@ -207,13 +220,25 @@ function renderChart(data) {
                 };
                 
                 // 计算文本是否能放入矩形
-                const duration = api.value(3);
+                const durationText = api.value(3);
+                
+                // 将分钟数转换为小时和分钟格式（如果超过60分钟）
+                let formattedDuration = durationText;
+                if (durationText.endsWith('m')) {
+                    const minutes = parseInt(durationText.replace('m', ''));
+                    if (minutes > 60) {
+                        const hours = Math.floor(minutes / 60);
+                        const remainingMinutes = minutes % 60;
+                        formattedDuration = hours + 'h' + (remainingMinutes > 0 ? ' ' + remainingMinutes + 'm' : '');
+                    }
+                }
+                
                 const rectWidth = rectShape.width;
                 const fontSize = 12;
-                const textWidth = duration.length * fontSize * 0.6;
+                const textWidth = formattedDuration.length * fontSize * 0.6;
                 
                 // 只有当矩形宽度足够大时才显示文本
-                const showLabel = rectWidth > textWidth + 10;
+                const showLabel = rectWidth > textWidth + 2;
                 
                 return {
                     type: 'group',
@@ -228,7 +253,7 @@ function renderChart(data) {
                         showLabel ? {
                             type: 'text',
                             style: {
-                                text: duration,
+                                text: formattedDuration,
                                 textFont: api.font({fontSize: fontSize}),
                                 textFill: '#fff',
                                 textAlign: 'center',
