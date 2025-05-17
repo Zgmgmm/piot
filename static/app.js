@@ -351,13 +351,13 @@ function setTheme(theme) {
             window.myChart.setOption({
                 backgroundColor: '#FFFFFF',
                 textStyle: {
-                    fontFamily: '-light-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif'
+                    fontFamily: '"Inter", "Poppins", sans-serif'
                 },
                 title: {
                     textStyle: {
                         color: '#1D1D1F',
-                        fontWeight: 500,
-                        fontSize: 14
+                        fontWeight: 600,
+                        fontSize: 16
                     }
                 },
                 tooltip: {
@@ -366,7 +366,7 @@ function setTheme(theme) {
                     textStyle: {
                         color: '#1D1D1F'
                     },
-                    extraCssText: 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); border-radius: 6px;'
+                    extraCssText: 'box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); border-radius: 8px;'
                 }
             });
         } else {
@@ -866,7 +866,7 @@ function processQueryResults(results) {
 // 将应用包名映射为中文显示名称
 function getAppDisplayName(appName) {
     const nameMapping = {
-        'com.light.finder': 'Finder',
+        'com.apple.finder': 'Finder',
         'com.tencent.xinWeChat': '微信',
         'com.googlecode.iterm2': 'Iterm2',
         'com.electron.lark.iron': '飞书会议',
@@ -878,7 +878,7 @@ function getAppDisplayName(appName) {
         'org.python.python': 'Python',
         'com.microsoft.VSCode': 'VSCode',
         'com.tencent.QQMusicMac': 'QQ音乐',
-        'com.light.systempreferences': '系统设置',
+        'com.apple.systempreferences': '系统设置',
     };
 
     // 如果在映射中找到则直接返回
